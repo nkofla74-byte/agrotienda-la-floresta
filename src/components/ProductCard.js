@@ -8,14 +8,14 @@ export const ProductCard = (product) => {
     ).join('');
 
     return `
-    <div class="product-card group bg-white dark:bg-gray-800 rounded-3xl shadow-sm hover:shadow-2xl dark:shadow-black/60 dark:hover:shadow-green-900/20 border border-gray-100 dark:border-white/5 overflow-hidden transition-all duration-500 flex flex-col h-full hover:-translate-y-2 relative isolate">
+    <div class="product-card group bg-white dark:bg-slate-800 rounded-3xl shadow-sm hover:shadow-2xl dark:shadow-black/60 dark:hover:shadow-green-900/20 border border-gray-100 dark:border-slate-700 overflow-hidden transition-all duration-500 flex flex-col h-full hover:-translate-y-2 relative isolate">
         
-        <div class="h-64 overflow-hidden relative bg-gray-100 dark:bg-gray-700">
+        <div class="h-64 overflow-hidden relative bg-gray-100 dark:bg-slate-700">
             <div class="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition z-10"></div>
             
             <img src="${product.imagen}" alt="${product.nombre}" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110">
             
-            <span class="absolute top-4 left-4 bg-white/90 dark:bg-gray-900/90 backdrop-blur-md text-agro-dark dark:text-green-400 text-xs font-bold px-3 py-1 rounded-full shadow-lg z-20 border border-white/50 dark:border-gray-600">
+            <span class="absolute top-4 left-4 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md text-agro-dark dark:text-green-400 text-xs font-bold px-3 py-1 rounded-full shadow-lg z-20 border border-white/50 dark:border-slate-600">
                 ${product.categoria}
             </span>
             ${isLowStock ? `
@@ -25,12 +25,12 @@ export const ProductCard = (product) => {
             ` : ''}
         </div>
 
-        <div class="p-6 flex flex-col flex-grow relative bg-white dark:bg-gray-800 transition-colors">
+        <div class="p-6 flex flex-col flex-grow relative bg-white dark:bg-slate-800 transition-colors">
             
             <h4 class="font-bold text-xl text-gray-800 dark:text-gray-100 mb-2 group-hover:text-agro-primary dark:group-hover:text-green-400 transition-colors">${product.nombre}</h4>
             <p class="text-gray-500 dark:text-gray-400 text-sm mb-4 leading-relaxed line-clamp-2 h-10">${product.descripcion}</p>
             
-            <div class="mt-auto bg-gray-50 dark:bg-gray-700/30 rounded-2xl p-4 border border-gray-100 dark:border-white/5">
+            <div class="mt-auto bg-gray-50 dark:bg-slate-700/50 rounded-2xl p-4 border border-gray-100 dark:border-slate-700">
                 
                 <div class="text-center mb-3">
                     <span class="text-xs text-gray-400 dark:text-gray-500 font-bold tracking-widest uppercase">Precio</span>
@@ -42,7 +42,7 @@ export const ProductCard = (product) => {
                 <div class="relative mb-4">
                     <i class="fa-solid fa-scale-balanced absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 text-sm z-10"></i>
                     <select 
-                        class="variant-selector w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-200 text-sm rounded-xl focus:ring-agro-primary focus:border-agro-primary block pl-9 p-2.5 shadow-sm cursor-pointer hover:border-agro-accent transition appearance-none font-medium"
+                        class="variant-selector w-full bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-600 text-gray-700 dark:text-gray-200 text-sm rounded-xl focus:ring-agro-primary focus:border-agro-primary block pl-9 p-2.5 shadow-sm cursor-pointer hover:border-agro-accent transition appearance-none font-medium"
                         data-id="${product.id}"
                         onchange="window.updateCardPrice(this, ${product.id})"
                     >

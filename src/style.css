@@ -24,36 +24,63 @@
 /* Estilos Globales */
 body {
     font-family: var(--font-sans);
-    @apply bg-gray-50 text-gray-800 antialiased transition-colors duration-300;
+    /* Usamos blanco puro en light mode y un gris no tan negro en dark mode */
+    @apply bg-white dark:bg-slate-900 text-gray-800 antialiased transition-colors duration-300;
 }
 
-/* Scroll suave */
 html {
     scroll-behavior: smooth;
     scroll-padding-top: 5rem;
 }
 
 /* MODO OSCURO GLOBAL */
-/* Cuando el HTML tiene la clase 'dark', aplicamos esto al body */
 .dark body {
-    @apply bg-gray-900 text-gray-100;
+    @apply text-gray-100;
+}
+
+/* --- HERO MEJORADO (MÁS LUZ) --- */
+.hero-slide {
+    position: absolute;
+    inset: 0;
+    background-size: cover;
+    background-position: center;
+    opacity: 0;
+    transition: opacity 1.5s ease-in-out;
+    z-index: 0;
+    /* TRUCO: Aumentamos el brillo de las fotos un 10% para móviles */
+    filter: brightness(1.1);
+}
+.hero-slide.active { opacity: 1; }
+
+/* Overlay Inteligente: Deja pasar luz en el centro */
+.hero-overlay {
+    position: absolute;
+    inset: 0;
+    /* Gradiente: Oscuro arriba y abajo para leer textos, transparente en el medio */
+    background: linear-gradient(to bottom, 
+        rgba(0,0,0,0.3) 0%, 
+        rgba(0,0,0,0.1) 40%, 
+        rgba(0,0,0,0.6) 100%
+    );
+}
+.dark .hero-overlay {
+    background: linear-gradient(to bottom, rgba(0,0,0,0.5), rgba(0,0,0,0.3), rgba(15, 23, 42, 1));
 }
 
 /* Carrito */
 .cart-modal {
-    @apply fixed top-0 right-0 h-full w-full sm:w-96 bg-white dark:bg-gray-800 shadow-2xl z-50 transform transition-transform duration-300 translate-x-full;
+    @apply fixed top-0 right-0 h-full w-full sm:w-96 bg-white dark:bg-slate-800 shadow-2xl z-50 transform transition-transform duration-300 translate-x-full;
 }
 .cart-modal.open {
     @apply translate-x-0;
 }
 .cart-overlay {
-    @apply fixed inset-0 bg-black/50 z-40 hidden opacity-0 transition-opacity duration-300;
+    @apply fixed inset-0 bg-black/30 backdrop-blur-sm z-40 hidden opacity-0 transition-opacity duration-300;
 }
 .cart-overlay.open {
     @apply block opacity-100;
 }
 
-/* Scrollbar personalizado */
 .cart-items::-webkit-scrollbar { width: 6px; }
 .cart-items::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 4px; }
 .dark .cart-items::-webkit-scrollbar-thumb { background-color: #4b5563; }
