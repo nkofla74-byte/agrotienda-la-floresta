@@ -1,44 +1,48 @@
 @import "tailwindcss";
 
 @theme {
-  --color-agro-primary: #166534;
-  --color-agro-light: #dcfce7;
-  --color-agro-accent: #f59e0b;
-  --color-agro-dark: #064e3b;
+  /* Definimos tus colores aquí para que Tailwind los entienda */
+  --color-agro-primary: #166534; /* green-800 */
+  --color-agro-dark: #064e3b;    /* green-900 */
+  --color-agro-light: #dcfce7;   /* green-100 */
+  --color-agro-accent: #f59e0b;  /* amber-500 */
+  
   --font-sans: 'Inter', sans-serif;
   
+  /* Animaciones personalizadas */
   --animate-fade-in: fadeIn 0.3s ease-in-out;
   --animate-scroll: scroll 40s linear infinite;
-}
-
-@keyframes fadeIn {
+  
+  /* Keyframes */
+  @keyframes fadeIn {
     from { opacity: 0; }
     to { opacity: 1; }
-}
-
-@keyframes scroll {
+  }
+  @keyframes scroll {
     0% { transform: translateX(0); }
     100% { transform: translateX(-50%); }
+  }
 }
 
 /* Estilos Globales */
 body {
     font-family: var(--font-sans);
-    /* Usamos blanco puro en light mode y un gris no tan negro en dark mode */
-    @apply bg-white dark:bg-slate-900 text-gray-800 antialiased transition-colors duration-300;
+    @apply bg-white dark:bg-slate-900 text-gray-800 dark:text-gray-100 antialiased transition-colors duration-300;
 }
 
 html {
     scroll-behavior: smooth;
     scroll-padding-top: 5rem;
+    /* Esto habilita el modo oscuro manual por clase */
+    color-scheme: light dark;
 }
 
-/* MODO OSCURO GLOBAL */
-.dark body {
-    @apply text-gray-100;
+/* Forzar modo oscuro si la clase .dark está presente en HTML */
+:root.dark {
+    color-scheme: dark;
 }
 
-/* --- HERO MEJORADO (MÁS LUZ) --- */
+/* --- HERO OPTIMIZADO PARA MÓVIL --- */
 .hero-slide {
     position: absolute;
     inset: 0;
@@ -47,16 +51,14 @@ html {
     opacity: 0;
     transition: opacity 1.5s ease-in-out;
     z-index: 0;
-    /* TRUCO: Aumentamos el brillo de las fotos un 10% para móviles */
-    filter: brightness(1.1);
+    filter: brightness(1.1); /* Más luz en móviles */
 }
 .hero-slide.active { opacity: 1; }
 
-/* Overlay Inteligente: Deja pasar luz en el centro */
 .hero-overlay {
     position: absolute;
     inset: 0;
-    /* Gradiente: Oscuro arriba y abajo para leer textos, transparente en el medio */
+    /* Gradiente que deja pasar la luz en el centro */
     background: linear-gradient(to bottom, 
         rgba(0,0,0,0.3) 0%, 
         rgba(0,0,0,0.1) 40%, 
@@ -64,7 +66,7 @@ html {
     );
 }
 .dark .hero-overlay {
-    background: linear-gradient(to bottom, rgba(0,0,0,0.5), rgba(0,0,0,0.3), rgba(15, 23, 42, 1));
+    background: linear-gradient(to bottom, rgba(0,0,0,0.6), rgba(0,0,0,0.4), rgba(15, 23, 42, 1));
 }
 
 /* Carrito */
@@ -81,6 +83,7 @@ html {
     @apply block opacity-100;
 }
 
+/* Scrollbars */
 .cart-items::-webkit-scrollbar { width: 6px; }
 .cart-items::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 4px; }
 .dark .cart-items::-webkit-scrollbar-thumb { background-color: #4b5563; }

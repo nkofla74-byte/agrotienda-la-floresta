@@ -1,11 +1,92 @@
 import './style.css';
-import { products } from './data/products';
+import { products as initialProducts } from './data/products';
 import { ProductCard } from './components/ProductCard';
 import { formatMoney } from './utils/formatters';
+import { supabase } from './supabaseClient'; // Importamos la conexión
 
 // --- ESTADO ---
+let products = [...initialProducts]; // Copia inicial
 let cart = [];
 const WHATSAPP_NUMBER = "573000000000"; 
+
+// --- DETECTAR MODO ADMIN ---
+const urlParams = new URLSearchParams(window.location.search);
+const isAdminMode = urlParams.has('admin');
+
+// --- FUNCIONES SUPABASE (NUBE) ---
+
+// 1. Cargar Stock Real desde la Nube
+const fetchStock = async () => {
+    // Leemos la tabla 'inventario'
+    const { data, error } = await supabase
+        .from('inventario')
+        .select('*');
+
+    if (error) {
+        console.error('Error cargando stock:', error);
+        return;
+    }
+
+    // Actualizamos nuestra lista de productos local con la info de la nube
+    if (data) {
+        products = products.map(p => {
+            const stockInfo = data.find(item => item.id === p.id);
+            // Si encontramos info en la nube, la usamos. Si no, asumimos que está disponible.
+            return { ...p, disponible: stockInfo ? stockInfo.disponible : true };
+        });
+        renderProducts(products); // Volvemos a pintar la tienda
+    }
+};
+
+// 2. Suscribirse a cambios en Tiempo Real (Magia ✨)
+const subscribeToStock = () => {
+    supabase
+        .channel('cambios-stock')
+        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'inventario' }, (payload) => {
+            console.log('Cambio detectado en la nube!', payload);
+            const updatedItem = payload.new;
+            
+            // Actualizar solo el producto que cambió
+            const productIndex = products.findIndex(p => p.id === updatedItem.id);
+            if (productIndex !== -1) {
+                products[productIndex].disponible = updatedItem.disponible;
+                renderProducts(products);
+                
+                // Si estamos en modo admin, mostrar notificación
+                if (isAdminMode) {
+                    showToastAdmin(products[productIndex].nombre, updatedItem.disponible);
+                }
+            }
+        })
+        .subscribe();
+};
+
+// 3. Cambiar Stock (Solo Admin)
+window.toggleAvailability = async (productId) => {
+    const product = products.find(p => p.id === productId);
+    if (!product) return;
+
+    const newState = !product.disponible;
+
+    // Actualización OPTIMISTA (Para que se sienta rápido en el celular)
+    // 1. Cambiamos visualmente ya
+    product.disponible = newState;
+    renderProducts(products);
+
+    // 2. Enviamos el cambio a Supabase
+    const { error } = await supabase
+        .from('inventario')
+        .update({ disponible: newState })
+        .eq('id', productId);
+
+    if (error) {
+        console.error("Error actualizando Supabase:", error);
+        alert("Hubo un error guardando el cambio en la nube.");
+        // Revertir si falló
+        product.disponible = !newState;
+        renderProducts(products);
+    }
+};
 
 // --- FUNCIÓN GLOBAL PRECIO ---
 window.updateCardPrice = (selectElement, productId) => {
@@ -37,12 +118,14 @@ const checkoutBtn = document.getElementById('checkout-btn');
 
 // --- FUNCIONES RENDER ---
 const renderProducts = (lista) => {
-    grid.style.opacity = '0';
-    setTimeout(() => {
-        if (lista.length > 0) {
-            grid.innerHTML = lista.map(product => ProductCard(product)).join('');
+    // Nota: Quitamos la animación de opacidad aquí para que las actualizaciones en tiempo real sean fluidas
+    if (lista.length > 0) {
+        grid.innerHTML = lista.map(product => ProductCard(product, isAdminMode)).join('');
+        
+        if (!isAdminMode) {
             document.querySelectorAll('.add-to-cart-btn').forEach(btn => {
                 btn.addEventListener('click', (e) => {
+                    if(e.currentTarget.disabled) return;
                     const id = parseInt(e.currentTarget.getAttribute('data-id'));
                     const select = document.querySelector(`.variant-selector[data-id="${id}"]`);
                     const variantIndex = parseInt(select.value);
@@ -50,11 +133,10 @@ const renderProducts = (lista) => {
                     openCart();
                 });
             });
-        } else {
-            grid.innerHTML = `<div class="col-span-full text-center py-12"><p class="text-gray-400">No hay productos disponibles.</p></div>`;
         }
-        grid.style.opacity = '1';
-    }, 200);
+    } else {
+        grid.innerHTML = `<div class="col-span-full text-center py-12"><p class="text-gray-400">Cargando productos...</p></div>`;
+    }
 };
 
 const addToCart = (productId, variantIndex) => {
@@ -136,17 +218,25 @@ const closeCart = () => { cartModal.classList.remove('open'); cartOverlay.classL
 
 const checkout = () => {
     if (cart.length === 0) return;
-    let message = "Hola Agrotienda! 🌿 Pedido:%0A%0A";
-    cart.forEach(item => message += `▪ ${item.quantity} x ${item.nombre} (${item.variantName}) - ${formatMoney(item.precio * item.quantity)}%0A`);
+    let message = "¡Hola amigos de La Floresta! 👋%0A%0A";
+    message += "Me gustaría apoyar el campo y recibir los siguientes productos frescos en mi hogar: 🌿%0A%0A";
+    cart.forEach(item => {
+        message += `✅ *${item.quantity} x ${item.nombre}* - ${item.variantName}%0A   └ Subtotal: ${formatMoney(item.precio * item.quantity)}%0A`;
+    });
     const totalPrice = cart.reduce((sum, item) => sum + (item.precio * item.quantity), 0);
-    message += `%0A*TOTAL: ${formatMoney(totalPrice)}*`;
-    message += `%0A%0A🛑 *Entrega Miércoles o Viernes (Pago Contra Entrega).*`;
-    message += "%0A%0AMis datos de entrega son:";
+    message += `%0A💰 *VALOR TOTAL: ${formatMoney(totalPrice)}*`;
+    message += "%0A%0A----------------------------------%0A";
+    message += "📦 *Confirmación de Entrega:*%0A";
+    message += "Tengo presente que las entregas son los *Miércoles y Viernes*.";
+    message += "%0A🤝 El pago lo haré *Contra Entrega* una vez reciba y verifique la calidad de los productos.";
+    message += "%0A%0A📍 *Mi Dirección:* (Escribe aquí tu dirección)%0A";
+    message += "👤 *A nombre de:* (Tu nombre)%0A";
+    message += "📝 *Nota adicional:* (Timbre, dejar en portería, etc)";
     window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${message}`, '_blank');
 };
 
-// --- NOTIFICACIONES ---
 const showToast = () => {
+    if (isAdminMode) return; 
     const nombres = ["Doña Gloria", "Don Jorge", "María", "Camilo", "La Sra. Rosa"];
     const barrios = ["Barrio El Centro", "Alto de la Cruz", "La Pesebrera", "Barrio Sorbetes"];
     const acciones = ["compró", "pidió", "llevó"];
@@ -172,43 +262,50 @@ const showToast = () => {
     }
 };
 
-// --- HERO SLIDESHOW (FONDO DINÁMICO) ---
+const showToastAdmin = (productName, isAvailable) => {
+    const toast = document.createElement('div');
+    toast.className = `flex items-center gap-3 ${isAvailable ? 'bg-green-100 border-green-500' : 'bg-red-100 border-red-500'} p-4 rounded-xl shadow-xl border-l-4 min-w-[280px] fixed top-4 right-4 z-50 animate-bounce`;
+    toast.innerHTML = `
+        <i class="fa-solid ${isAvailable ? 'fa-check text-green-600' : 'fa-xmark text-red-600'} text-xl"></i>
+        <div>
+            <p class="font-bold text-gray-800">${productName}</p>
+            <p class="text-xs text-gray-600">${isAvailable ? 'Ahora está DISPONIBLE' : 'Marcado como AGOTADO'}</p>
+        </div>
+    `;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 3000);
+}
+
 const startHeroSlideshow = () => {
-    // Imágenes reales del paisaje de Fresno
-    const heroImages = [
-        '/images/fresnolog.jpg',
-        '/images/arbolaguacate.jpg',
-        '/images/cultivomazorcsa.jpeg',
-        '/images/yucacultivo.jpg'
-    ];
-    
+    const heroImages = ['/images/fresnolog.jpg', '/images/arbolaguacate.jpg', '/images/cultivomazorcsa.jpeg', '/images/yucacultivo.jpg'];
     const container = document.getElementById('hero-bg');
     if (!container) return;
-
-    // Crear elementos de imagen
     heroImages.forEach((src, index) => {
         const slide = document.createElement('div');
         slide.className = `hero-slide ${index === 0 ? 'active' : ''}`;
         slide.style.backgroundImage = `url('${src}')`;
         container.appendChild(slide);
     });
-
-    // Ciclo infinito
     let currentIndex = 0;
     const slides = document.querySelectorAll('.hero-slide');
-    
     setInterval(() => {
         slides[currentIndex].classList.remove('active');
         currentIndex = (currentIndex + 1) % slides.length;
         slides[currentIndex].classList.add('active');
-    }, 5000); // Cambia cada 5 segundos
+    }, 5000);
 };
 
 // --- INIT ---
-document.addEventListener('DOMContentLoaded', () => {
-    renderProducts(products);
-    startHeroSlideshow(); // <-- Iniciar slideshow
+document.addEventListener('DOMContentLoaded', async () => {
+    // 1. Iniciamos cosas estáticas
+    startHeroSlideshow();
     
+    // 2. Cargamos el stock desde la nube
+    await fetchStock(); 
+    
+    // 3. Nos suscribimos a cambios en tiempo real
+    subscribeToStock();
+
     // UI Events
     cartBtn.addEventListener('click', openCart);
     closeCartBtn.addEventListener('click', closeCart);
@@ -242,5 +339,12 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    setTimeout(() => { showToast(); setInterval(showToast, 30000); }, 3000);
+    if(!isAdminMode) {
+        setTimeout(() => { showToast(); setInterval(showToast, 30000); }, 3000);
+    } else {
+        const adminBadge = document.createElement('div');
+        adminBadge.className = "fixed bottom-4 right-4 bg-red-600 text-white px-4 py-2 rounded-full shadow-2xl z-50 font-bold border-2 border-white animate-pulse";
+        adminBadge.innerHTML = '<i class="fa-solid fa-user-gear"></i> MODO ADMIN';
+        document.body.appendChild(adminBadge);
+    }
 });
