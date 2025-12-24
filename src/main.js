@@ -7,17 +7,16 @@ import { supabase } from './supabaseClient'; // Importamos la conexión
 // --- ESTADO ---
 let products = [...initialProducts]; // Copia inicial
 let cart = [];
-const WHATSAPP_NUMBER = "573000000000"; 
+const WHATSAPP_NUMBER = "573122339294"; 
 
 // --- DETECTAR MODO ADMIN ---
 const urlParams = new URLSearchParams(window.location.search);
 const isAdminMode = urlParams.has('admin');
 
-// --- FUNCIONES SUPABASE (NUBE) ---
+// --- FUNCIONES SUPABASE (NUBE - NO TOCAR) ---
 
 // 1. Cargar Stock Real desde la Nube
 const fetchStock = async () => {
-    // Leemos la tabla 'inventario'
     const { data, error } = await supabase
         .from('inventario')
         .select('*');
@@ -27,18 +26,16 @@ const fetchStock = async () => {
         return;
     }
 
-    // Actualizamos nuestra lista de productos local con la info de la nube
     if (data) {
         products = products.map(p => {
             const stockInfo = data.find(item => item.id === p.id);
-            // Si encontramos info en la nube, la usamos. Si no, asumimos que está disponible.
             return { ...p, disponible: stockInfo ? stockInfo.disponible : true };
         });
-        renderProducts(products); // Volvemos a pintar la tienda
+        renderProducts(products); 
     }
 };
 
-// 2. Suscribirse a cambios en Tiempo Real (Magia ✨)
+// 2. Suscribirse a cambios en Tiempo Real
 const subscribeToStock = () => {
     supabase
         .channel('cambios-stock')
@@ -46,13 +43,11 @@ const subscribeToStock = () => {
             console.log('Cambio detectado en la nube!', payload);
             const updatedItem = payload.new;
             
-            // Actualizar solo el producto que cambió
             const productIndex = products.findIndex(p => p.id === updatedItem.id);
             if (productIndex !== -1) {
                 products[productIndex].disponible = updatedItem.disponible;
                 renderProducts(products);
                 
-                // Si estamos en modo admin, mostrar notificación
                 if (isAdminMode) {
                     showToastAdmin(products[productIndex].nombre, updatedItem.disponible);
                 }
@@ -68,12 +63,11 @@ window.toggleAvailability = async (productId) => {
 
     const newState = !product.disponible;
 
-    // Actualización OPTIMISTA (Para que se sienta rápido en el celular)
-    // 1. Cambiamos visualmente ya
+    // Actualización visual inmediata
     product.disponible = newState;
     renderProducts(products);
 
-    // 2. Enviamos el cambio a Supabase
+    // Guardar en Supabase
     const { error } = await supabase
         .from('inventario')
         .update({ disponible: newState })
@@ -82,8 +76,7 @@ window.toggleAvailability = async (productId) => {
     if (error) {
         console.error("Error actualizando Supabase:", error);
         alert("Hubo un error guardando el cambio en la nube.");
-        // Revertir si falló
-        product.disponible = !newState;
+        product.disponible = !newState; // Revertir si falla
         renderProducts(products);
     }
 };
@@ -118,7 +111,6 @@ const checkoutBtn = document.getElementById('checkout-btn');
 
 // --- FUNCIONES RENDER ---
 const renderProducts = (lista) => {
-    // Nota: Quitamos la animación de opacidad aquí para que las actualizaciones en tiempo real sean fluidas
     if (lista.length > 0) {
         grid.innerHTML = lista.map(product => ProductCard(product, isAdminMode)).join('');
         
@@ -166,6 +158,8 @@ const removeFromCart = (uniqueId) => {
     updateCartUI();
 };
 
+// --- AQUÍ ESTÁN LOS CAMBIOS IMPORTANTES (VISUALES) ---
+
 const updateCartUI = () => {
     const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
     cartCountElement.textContent = totalItems;
@@ -179,7 +173,8 @@ const updateCartUI = () => {
     }
 
     const totalPrice = cart.reduce((sum, item) => sum + (item.precio * item.quantity), 0);
-    cartTotalElement.textContent = formatMoney(totalPrice);
+    // CAMBIO 1: Añadimos asterisco al total para indicar que es referencia
+    cartTotalElement.textContent = formatMoney(totalPrice) + "*"; 
 
     if (cart.length === 0) {
         cartItemsContainer.innerHTML = `
@@ -191,21 +186,30 @@ const updateCartUI = () => {
         `;
     } else {
         cartItemsContainer.innerHTML = cart.map(item => `
-            <div class="flex justify-between items-center bg-white dark:bg-gray-800 p-3 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm animate-fade-in">
+            <div class="flex justify-between items-center bg-white dark:bg-gray-800 p-3 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm animate-fade-in mb-2">
                 <div class="flex items-center gap-3">
                     <img src="${item.imagen}" class="w-12 h-12 rounded-lg object-cover bg-gray-100">
                     <div>
                         <h5 class="font-bold text-sm text-gray-800 dark:text-white">${item.nombre}</h5>
                         <p class="text-xs text-agro-primary font-bold bg-green-50 dark:bg-green-900/30 px-2 py-0.5 rounded inline-block">${item.variantName}</p>
-                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">${item.quantity} x ${formatMoney(item.precio)}</p>
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">${item.quantity} x ~${formatMoney(item.precio)}</p>
                     </div>
                 </div>
                 <div class="flex items-center gap-3">
-                    <span class="font-bold text-agro-dark dark:text-gray-200 text-sm">${formatMoney(item.precio * item.quantity)}</span>
+                    <span class="font-bold text-agro-dark dark:text-gray-200 text-sm">~${formatMoney(item.precio * item.quantity)}</span>
                     <button class="remove-btn text-red-400 hover:text-red-600 transition p-1" data-unique-id="${item.uniqueId}"><i class="fa-solid fa-trash-can"></i></button>
                 </div>
             </div>
         `).join('');
+
+        // CAMBIO 2: Alerta visual amarilla dentro del carrito
+        const alertDiv = document.createElement('div');
+        alertDiv.className = "bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 p-3 rounded-lg text-xs text-orange-800 dark:text-orange-200 mt-4 flex gap-2 items-start";
+        alertDiv.innerHTML = `
+            <i class="fa-solid fa-triangle-exclamation mt-0.5"></i>
+            <p><strong>Importante:</strong> Los precios mostrados son de referencia. El valor final puede variar levemente según la cosecha del día. Te confirmaremos el total exacto por WhatsApp.</p>
+        `;
+        cartItemsContainer.appendChild(alertDiv);
 
         document.querySelectorAll('.remove-btn').forEach(btn => {
             btn.addEventListener('click', (e) => removeFromCart(e.currentTarget.getAttribute('data-unique-id')));
@@ -218,23 +222,33 @@ const closeCart = () => { cartModal.classList.remove('open'); cartOverlay.classL
 
 const checkout = () => {
     if (cart.length === 0) return;
+    
+    // CAMBIO 3: Mensaje de WhatsApp actualizado y protegido
     let message = "¡Hola amigos de La Floresta! 👋%0A%0A";
-    message += "Me gustaría apoyar el campo y recibir los siguientes productos frescos en mi hogar: 🌿%0A%0A";
+    message += "Me gustaría pedir los siguientes productos (sujetos a disponibilidad y precio del día): 🌿%0A%0A";
+    
     cart.forEach(item => {
-        message += `✅ *${item.quantity} x ${item.nombre}* - ${item.variantName}%0A   └ Subtotal: ${formatMoney(item.precio * item.quantity)}%0A`;
+        message += `✅ *${item.quantity} x ${item.nombre}* - ${item.variantName}%0A   └ Ref: ${formatMoney(item.precio * item.quantity)}%0A`;
     });
+    
     const totalPrice = cart.reduce((sum, item) => sum + (item.precio * item.quantity), 0);
-    message += `%0A💰 *VALOR TOTAL: ${formatMoney(totalPrice)}*`;
+    
+    message += `%0A💰 *VALOR APROXIMADO: ${formatMoney(totalPrice)}*`;
+    message += `%0A_(Entiendo que este valor es una referencia y confirmaremos el precio final en el chat)_`;
+    
     message += "%0A%0A----------------------------------%0A";
     message += "📦 *Confirmación de Entrega:*%0A";
     message += "Tengo presente que las entregas son los *Miércoles y Viernes*.";
     message += "%0A🤝 El pago lo haré *Contra Entrega* una vez reciba y verifique la calidad de los productos.";
     message += "%0A%0A📍 *Mi Dirección:* (Escribe aquí tu dirección)%0A";
     message += "👤 *A nombre de:* (Tu nombre)%0A";
+    message += "👤 *apto :* (numero de apto)%0A";
     message += "📝 *Nota adicional:* (Timbre, dejar en portería, etc)";
+    
     window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${message}`, '_blank');
 };
 
+// --- NOTIFICACIONES (Igual que antes) ---
 const showToast = () => {
     if (isAdminMode) return; 
     const nombres = ["Doña Gloria", "Don Jorge", "María", "Camilo", "La Sra. Rosa"];
