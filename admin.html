@@ -7,62 +7,66 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        .hidden-content { display: none; }
+        /* Estilos específicos para los interruptores y pestañas */
         .active-tab { background-color: #16a34a; color: white; }
         .inactive-tab { background-color: #e2e8f0; color: #475569; }
-        /* Toggle Switch Styles */
-        .toggle-checkbox:checked {
-            right: 0;
-            border-color: #68D391;
-        }
-        .toggle-checkbox:checked + .toggle-label {
-            background-color: #68D391;
-        }
+        .toggle-checkbox:checked { right: 0; border-color: #68D391; }
+        .toggle-checkbox:checked + .toggle-label { background-color: #68D391; }
     </style>
 </head>
 <body class="bg-gray-100 min-h-screen font-sans">
 
-    <div id="login-screen" class="flex items-center justify-center h-screen bg-slate-900 z-50 fixed w-full top-0">
+    <div id="login-screen" class="flex items-center justify-center h-screen bg-slate-900 z-50 fixed w-full top-0 left-0 transition-all duration-500">
         <div class="bg-white p-8 rounded-xl shadow-2xl text-center max-w-sm w-full">
             <div class="mb-4 text-green-600 text-5xl"><i class="fa-solid fa-user-shield"></i></div>
             <h2 class="text-2xl font-bold mb-4 text-slate-800">Admin La Floresta</h2>
-            <input type="password" id="password-input" placeholder="Contraseña..." class="w-full p-3 border border-gray-300 rounded-lg mb-4 focus:ring-2 focus:ring-green-500 outline-none">
-            <button onclick="checkLogin()" class="w-full bg-green-600 text-white font-bold py-3 rounded-lg hover:bg-green-700 transition">Ingresar</button>
-            <p id="error-msg" class="text-red-500 text-sm mt-2 hidden">Contraseña incorrecta</p>
+            
+            <input type="password" id="password-input" placeholder="Contraseña..." class="w-full p-3 border border-gray-300 rounded-lg mb-4 focus:ring-2 focus:ring-green-500 outline-none transition text-center text-lg">
+            
+            <button onclick="checkLogin()" class="w-full bg-green-600 text-white font-bold py-3 rounded-lg hover:bg-green-700 transition shadow-lg text-lg">
+                ENTRAR
+            </button>
+            
+            <p id="error-msg" class="text-red-500 text-sm mt-3 hidden font-bold animate-pulse">
+                <i class="fa-solid fa-circle-exclamation"></i> Contraseña incorrecta
+            </p>
+            <p class="text-xs text-gray-400 mt-4">Clave: admin123</p>
         </div>
     </div>
 
-    <div id="dashboard" class="hidden-content min-h-screen flex flex-col">
+    <div id="dashboard" class="hidden min-h-screen flex flex-col">
         
-        <nav class="bg-slate-900 text-white p-4 shadow-md">
+        <nav class="bg-slate-900 text-white p-4 shadow-md sticky top-0 z-40">
             <div class="max-w-7xl mx-auto flex justify-between items-center">
                 <div class="flex items-center gap-3">
                     <i class="fa-solid fa-leaf text-green-400 text-xl"></i>
                     <h1 class="font-bold text-xl tracking-wide">Panel de Control</h1>
                 </div>
-                <a href="/" class="text-sm text-gray-300 hover:text-white flex items-center gap-2">
-                    Ver Tienda <i class="fa-solid fa-arrow-right-from-bracket"></i>
-                </a>
+                <div class="flex items-center gap-4">
+                    <a href="/" class="text-sm bg-slate-800 hover:bg-slate-700 px-3 py-2 rounded-lg text-gray-300 hover:text-white flex items-center gap-2 transition">
+                        Ver Tienda <i class="fa-solid fa-arrow-right-from-bracket"></i>
+                    </a>
+                </div>
             </div>
         </nav>
 
         <div class="flex-1 max-w-7xl mx-auto w-full p-6">
             
-            <div class="flex gap-4 mb-8">
-                <button onclick="switchTab('pedidos')" id="tab-pedidos" class="flex-1 py-4 rounded-xl font-bold text-lg shadow transition flex justify-center items-center gap-2 active-tab">
-                    <i class="fa-solid fa-list-check"></i> Gestión de Pedidos
+            <div class="flex gap-4 mb-8 overflow-x-auto pb-2">
+                <button onclick="switchTab('pedidos')" id="tab-pedidos" class="flex-1 py-4 px-6 rounded-xl font-bold text-lg shadow transition flex justify-center items-center gap-2 active-tab whitespace-nowrap">
+                    <i class="fa-solid fa-list-check"></i> Pedidos
                 </button>
-                <button onclick="switchTab('inventario')" id="tab-inventario" class="flex-1 py-4 rounded-xl font-bold text-lg shadow transition flex justify-center items-center gap-2 inactive-tab">
-                    <i class="fa-solid fa-boxes-stacked"></i> Inventario y Disponibilidad
+                <button onclick="switchTab('inventario')" id="tab-inventario" class="flex-1 py-4 px-6 rounded-xl font-bold text-lg shadow transition flex justify-center items-center gap-2 inactive-tab whitespace-nowrap">
+                    <i class="fa-solid fa-boxes-stacked"></i> Inventario
                 </button>
             </div>
 
-            <div id="view-pedidos">
-                <div class="flex justify-between items-center mb-6">
-                    <h2 class="text-2xl font-bold text-slate-800">📦 Últimos Pedidos</h2>
-                    <div class="flex gap-2">
-                        <button onclick="fetchPedidos()" class="bg-blue-100 text-blue-700 hover:bg-blue-200 px-4 py-2 rounded-lg font-bold"><i class="fa-solid fa-rotate"></i></button>
-                        <button onclick="downloadExcel()" class="bg-green-600 text-white hover:bg-green-700 px-4 py-2 rounded-lg font-bold shadow"><i class="fa-solid fa-file-excel"></i> Exportar a Excel</button>
+            <div id="view-pedidos" class="animate-fade-in">
+                <div class="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
+                    <h2 class="text-2xl font-bold text-slate-800">📦 Gestión de Pedidos</h2>
+                    <div class="flex gap-2 w-full sm:w-auto">
+                        <button onclick="fetchPedidos()" class="bg-blue-100 text-blue-700 hover:bg-blue-200 px-4 py-2 rounded-lg font-bold flex-1 sm:flex-none transition"><i class="fa-solid fa-rotate"></i> Actualizar</button>
+                        <button onclick="downloadExcel()" class="bg-green-600 text-white hover:bg-green-700 px-4 py-2 rounded-lg font-bold shadow flex-1 sm:flex-none transition flex items-center justify-center gap-2"><i class="fa-solid fa-file-excel"></i> Excel</button>
                     </div>
                 </div>
 
@@ -74,7 +78,7 @@
                                     <th class="p-4 border-b">Fecha</th>
                                     <th class="p-4 border-b">Cliente</th>
                                     <th class="p-4 border-b">Dirección</th>
-                                    <th class="p-4 border-b">Resumen Pedido</th>
+                                    <th class="p-4 border-b">Productos</th>
                                     <th class="p-4 border-b text-right">Total</th>
                                     <th class="p-4 border-b text-center">Estado</th>
                                     <th class="p-4 border-b text-center">Acción</th>
@@ -88,12 +92,11 @@
                 </div>
             </div>
 
-            <div id="view-inventario" class="hidden-content">
+            <div id="view-inventario" class="hidden animate-fade-in">
                 <div class="flex justify-between items-center mb-6">
-                    <h2 class="text-2xl font-bold text-slate-800">🥑 Control de Stock</h2>
-                    <button onclick="cargarInventario()" class="bg-blue-100 text-blue-700 hover:bg-blue-200 px-4 py-2 rounded-lg font-bold"><i class="fa-solid fa-rotate"></i> Actualizar</button>
+                    <h2 class="text-2xl font-bold text-slate-800">🥑 Disponibilidad de Productos</h2>
+                    <button onclick="cargarInventario()" class="bg-blue-100 text-blue-700 hover:bg-blue-200 px-4 py-2 rounded-lg font-bold transition"><i class="fa-solid fa-rotate"></i> Sincronizar</button>
                 </div>
-
                 <div id="inventory-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                     <div class="col-span-full text-center py-10 text-gray-400">Cargando inventario...</div>
                 </div>
@@ -104,11 +107,11 @@
 
     <script type="module">
         import { supabase } from './src/supabaseClient.js';
-        import { products as initialProducts } from './src/data/products.js'; // Importamos tu catálogo base
+        import { products as initialProducts } from './src/data/products.js'; 
         import { formatMoney } from './src/utils/formatters.js';
 
         let pedidosData = [];
-        let productosReales = [...initialProducts]; // Estado local del inventario
+        let productosReales = [...initialProducts];
 
         // --- SISTEMA DE PESTAÑAS ---
         window.switchTab = (tab) => {
@@ -118,63 +121,80 @@
             const btnInventario = document.getElementById('tab-inventario');
 
             if(tab === 'pedidos') {
-                viewPedidos.classList.remove('hidden-content');
-                viewInventario.classList.add('hidden-content');
-                btnPedidos.className = "flex-1 py-4 rounded-xl font-bold text-lg shadow transition flex justify-center items-center gap-2 active-tab";
-                btnInventario.className = "flex-1 py-4 rounded-xl font-bold text-lg shadow transition flex justify-center items-center gap-2 inactive-tab";
+                viewPedidos.classList.remove('hidden');
+                viewInventario.classList.add('hidden');
+                btnPedidos.className = "flex-1 py-4 px-6 rounded-xl font-bold text-lg shadow transition flex justify-center items-center gap-2 active-tab whitespace-nowrap";
+                btnInventario.className = "flex-1 py-4 px-6 rounded-xl font-bold text-lg shadow transition flex justify-center items-center gap-2 inactive-tab whitespace-nowrap";
                 fetchPedidos();
             } else {
-                viewPedidos.classList.add('hidden-content');
-                viewInventario.classList.remove('hidden-content');
-                btnPedidos.className = "flex-1 py-4 rounded-xl font-bold text-lg shadow transition flex justify-center items-center gap-2 inactive-tab";
-                btnInventario.className = "flex-1 py-4 rounded-xl font-bold text-lg shadow transition flex justify-center items-center gap-2 active-tab";
+                viewPedidos.classList.add('hidden');
+                viewInventario.classList.remove('hidden');
+                btnPedidos.className = "flex-1 py-4 px-6 rounded-xl font-bold text-lg shadow transition flex justify-center items-center gap-2 inactive-tab whitespace-nowrap";
+                btnInventario.className = "flex-1 py-4 px-6 rounded-xl font-bold text-lg shadow transition flex justify-center items-center gap-2 active-tab whitespace-nowrap";
                 cargarInventario();
             }
         };
 
-        // --- AUTH ---
+        // --- LOGIN FUERZA BRUTA (AQUÍ ESTÁ LA SOLUCIÓN) ---
         window.checkLogin = () => {
-            const pass = document.getElementById('password-input').value;
-            if(pass === 'admin123') { // CONTRASEÑA
-                document.getElementById('login-screen').classList.add('hidden-content');
-                document.getElementById('dashboard').classList.remove('hidden-content');
-                fetchPedidos(); // Carga inicial
+            const input = document.getElementById('password-input');
+            const loginScreen = document.getElementById('login-screen');
+            const dashboard = document.getElementById('dashboard');
+            const errorMsg = document.getElementById('error-msg');
+            
+            const passIngresada = input.value.trim(); 
+            const CLAVE_REAL = 'admin123';
+
+            if(passIngresada === CLAVE_REAL) { 
+                // 1. Ocultar Login usando estilo directo (MÁS SEGURO)
+                loginScreen.style.display = 'none'; 
+                
+                // 2. Mostrar Dashboard y asegurar que sea Flex
+                dashboard.classList.remove('hidden');
+                dashboard.style.display = 'flex'; 
+
+                // 3. Cambiar URL para que se sienta como redirección
+                window.location.hash = "dashboard";
+
+                // 4. Cargar datos
+                fetchPedidos(); 
             } else {
-                document.getElementById('error-msg').classList.remove('hidden');
+                errorMsg.classList.remove('hidden');
+                alert(`Error: Clave incorrecta.\nTu escribiste: "${passIngresada}"`);
+                input.value = ''; 
+                input.focus();
             }
         };
 
-        // ===========================
-        // LÓGICA DE PEDIDOS
-        // ===========================
+        // --- PEDIDOS ---
         window.fetchPedidos = async () => {
             const { data, error } = await supabase.from('pedidos').select('*').order('created_at', { ascending: false });
-            if (error) return alert('Error: ' + error.message);
+            if (error) { console.error("Error BD:", error); return; }
             pedidosData = data;
             renderTable(data);
         };
 
         const renderTable = (pedidos) => {
             const tbody = document.getElementById('table-body');
-            if(pedidos.length === 0) return tbody.innerHTML = `<tr><td colspan="7" class="p-8 text-center">Sin pedidos.</td></tr>`;
+            if(!pedidos || pedidos.length === 0) return tbody.innerHTML = `<tr><td colspan="7" class="p-8 text-center text-gray-500">No hay pedidos registrados.</td></tr>`;
 
             tbody.innerHTML = pedidos.map(p => {
                 const fecha = new Date(p.created_at).toLocaleString('es-CO', { month: 'short', day: 'numeric', hour: '2-digit', minute:'2-digit' });
-                const lista = p.productos.map(i => `<div>• ${i.quantity}x ${i.nombre}</div>`).join('');
+                const lista = p.productos.map(i => `<div>• <b>${i.quantity}</b>x ${i.nombre}</div>`).join('');
                 const statusColor = p.estado === 'pendiente' ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800';
 
                 return `
-                    <tr class="hover:bg-gray-50 border-b last:border-0 transition bg-white">
-                        <td class="p-4 whitespace-nowrap text-gray-500">${fecha}</td>
-                        <td class="p-4 font-bold text-gray-800">${p.nombre_cliente}</td>
-                        <td class="p-4 text-xs text-gray-600 max-w-[150px] truncate" title="${p.direccion_entrega}">${p.direccion_entrega}</td>
-                        <td class="p-4 text-xs text-gray-600">${lista}</td>
+                    <tr class="hover:bg-gray-50 border-b last:border-0 bg-white">
+                        <td class="p-4 text-xs text-gray-500">${fecha}</td>
+                        <td class="p-4 font-bold">${p.nombre_cliente}</td>
+                        <td class="p-4 text-xs max-w-[150px] truncate" title="${p.direccion_entrega}">${p.direccion_entrega}</td>
+                        <td class="p-4 text-xs">${lista}</td>
                         <td class="p-4 text-right font-mono font-bold">${formatMoney(p.total_estimado)}</td>
                         <td class="p-4 text-center"><span class="px-2 py-1 rounded-full text-[10px] font-bold ${statusColor} uppercase">${p.estado}</span></td>
                         <td class="p-4 text-center">
                             ${p.estado === 'pendiente' ? 
-                                `<button onclick="marcarDespachado(${p.id})" class="text-blue-600 hover:text-blue-800 text-xs font-bold border border-blue-200 px-2 py-1 rounded bg-blue-50">MARCAR LISTO</button>` : 
-                                `<i class="fa-solid fa-check-double text-green-500"></i>`
+                                `<button onclick="marcarDespachado(${p.id})" class="text-blue-600 hover:text-white hover:bg-blue-600 border border-blue-200 px-3 py-1 rounded-md text-xs font-bold transition">DESPACHAR</button>` : 
+                                `<i class="fa-solid fa-circle-check text-green-500 text-lg"></i>`
                             }
                         </td>
                     </tr>
@@ -183,9 +203,9 @@
         };
 
         window.marcarDespachado = async (id) => {
-            if(!confirm('¿Marcar pedido como despachado?')) return;
-            await supabase.from('pedidos').update({ estado: 'despachado' }).eq('id', id);
-            fetchPedidos();
+            if(!confirm('¿Marcar como enviado?')) return;
+            const { error } = await supabase.from('pedidos').update({ estado: 'despachado' }).eq('id', id);
+            if(!error) fetchPedidos();
         };
 
         window.downloadExcel = () => {
@@ -193,58 +213,47 @@
             let csv = "ID,Fecha,Cliente,Direccion,Total,Estado,Detalle\n";
             pedidosData.forEach(p => {
                 const detalle = p.productos.map(i => `${i.quantity}x ${i.nombre}`).join(" | ");
-                const dir = p.direccion_entrega.replace(/,/g, ' '); 
-                csv += `${p.id},${new Date(p.created_at).toLocaleDateString()},${p.nombre_cliente},${dir},${p.total_estimado},${p.estado},"${detalle}"\n`;
+                csv += `${p.id},${new Date(p.created_at).toLocaleDateString()},${p.nombre_cliente},${p.direccion_entrega},${p.total_estimado},${p.estado},"${detalle}"\n`;
             });
             const link = document.createElement("a");
             link.href = "data:text/csv;charset=utf-8," + encodeURI(csv);
-            link.download = `pedidos_la_floresta_${new Date().toISOString().slice(0,10)}.csv`;
+            link.download = `pedidos_${new Date().toISOString().slice(0,10)}.csv`;
+            document.body.appendChild(link);
             link.click();
+            document.body.removeChild(link);
         };
 
-        // ===========================
-        // LÓGICA DE INVENTARIO
-        // ===========================
+        // --- INVENTARIO ---
         window.cargarInventario = async () => {
             const grid = document.getElementById('inventory-grid');
-            grid.innerHTML = '<div class="col-span-full text-center py-10"><i class="fa-solid fa-spinner fa-spin text-2xl text-green-600"></i><p>Sincronizando con la nube...</p></div>';
+            grid.innerHTML = '<div class="col-span-full text-center py-10 text-green-600"><i class="fa-solid fa-spinner fa-spin text-3xl"></i></div>';
 
-            // 1. Traer estado de la nube
             const { data, error } = await supabase.from('inventario').select('*');
-            
-            if (error) {
-                console.error(error);
-                return grid.innerHTML = '<p class="text-red-500 text-center">Error de conexión</p>';
-            }
+            if (error) { console.error(error); return grid.innerHTML = '<p class="text-red-500 text-center">Error conexión</p>'; }
 
-            // 2. Combinar con catálogo local
             productosReales = initialProducts.map(p => {
                 const stockInfo = data ? data.find(item => item.id === p.id) : null;
-                // Si existe en nube, usa ese estado. Si no, asume true.
                 return { ...p, disponible: stockInfo ? stockInfo.disponible : true };
             });
-
             renderInventario();
         };
 
         const renderInventario = () => {
             const grid = document.getElementById('inventory-grid');
             grid.innerHTML = productosReales.map(p => `
-                <div class="bg-white rounded-xl shadow-md p-4 flex items-center justify-between border-l-4 ${p.disponible ? 'border-green-500' : 'border-red-500'} transition-all hover:shadow-lg">
+                <div class="bg-white rounded-xl shadow-md p-4 flex items-center justify-between border-l-4 ${p.disponible ? 'border-green-500' : 'border-red-500'}">
                     <div class="flex items-center gap-4">
-                        <img src="${p.imagen}" class="w-16 h-16 rounded-lg object-cover bg-gray-100 shadow-sm ${!p.disponible ? 'grayscale' : ''}">
+                        <img src="${p.imagen}" class="w-16 h-16 rounded-lg object-cover bg-gray-100 ${!p.disponible ? 'grayscale' : ''}">
                         <div>
-                            <h4 class="font-bold text-gray-800">${p.nombre}</h4>
-                            <p class="text-xs text-gray-500 mb-1">${p.categoria}</p>
+                            <h4 class="font-bold text-gray-800 text-sm">${p.nombre}</h4>
                             <span class="text-[10px] px-2 py-0.5 rounded font-bold uppercase ${p.disponible ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}">
                                 ${p.disponible ? 'DISPONIBLE' : 'AGOTADO'}
                             </span>
                         </div>
                     </div>
-                    
                     <label class="flex items-center cursor-pointer relative">
-                        <input type="checkbox" class="sr-only" onchange="toggleStock(${p.id})" ${p.disponible ? 'checked' : ''}>
-                        <div class="w-11 h-6 bg-gray-200 rounded-full border border-gray-200 toggle-bg transition duration-200 ease-in-out ${p.disponible ? 'bg-green-400' : ''}"></div>
+                        <input type="checkbox" class="sr-only toggle-checkbox" onchange="toggleStock(${p.id})" ${p.disponible ? 'checked' : ''}>
+                        <div class="w-11 h-6 bg-gray-200 rounded-full border border-gray-200 toggle-label transition duration-200 ease-in-out"></div>
                         <div class="dot absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition transform duration-200 ease-in-out ${p.disponible ? 'translate-x-full' : ''}"></div>
                     </label>
                 </div>
@@ -252,27 +261,13 @@
         };
 
         window.toggleStock = async (id) => {
-            // 1. Encontrar producto
             const index = productosReales.findIndex(p => p.id === id);
             const nuevoEstado = !productosReales[index].disponible;
-            
-            // 2. Actualización Optimista (Visual inmediata)
-            productosReales[index].disponible = nuevoEstado;
+            productosReales[index].disponible = nuevoEstado; 
             renderInventario();
-
-            // 3. Guardar en Supabase
-            const { error } = await supabase
-                .from('inventario')
-                .update({ disponible: nuevoEstado })
-                .eq('id', id);
-
-            if(error) {
-                alert("Error al guardar en la nube. Revirtiendo...");
-                productosReales[index].disponible = !nuevoEstado;
-                renderInventario();
-            }
+            const { error } = await supabase.from('inventario').update({ disponible: nuevoEstado }).eq('id', id);
+            if(error) { alert("Error guardando"); productosReales[index].disponible = !nuevoEstado; renderInventario(); }
         };
-
     </script>
 </body>
 </html>

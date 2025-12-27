@@ -25,12 +25,13 @@ const actualizarDeadlineBanner = () => {
     let esUrgente = false;
     let proximoDespacho = "";
 
-    // Ciclo 1 (Despacho Lunes) vs Ciclo 2 (Despacho Jueves)
+    // Ciclo 1: Jueves a Domingo 6pm -> Despacho Lunes (Entrega Martes/Miér)
     if (diaSemana === 4 || diaSemana === 5 || diaSemana === 6 || (diaSemana === 0 && hora < 18)) {
         proximoDespacho = "Lunes";
         texto = "Haz tu pedido antes del <strong>DOMINGO 6:00 PM</strong>. Recibes el Martes/Miércoles.";
         if (diaSemana === 0) esUrgente = true;
     } else {
+        // Ciclo 2: Domingo 6pm a Miércoles 6pm -> Despacho Jueves (Entrega Vie/Sáb)
         proximoDespacho = "Jueves";
         texto = "Haz tu pedido antes del <strong>MIÉRCOLES 6:00 PM</strong>. Recibes el Viernes/Sábado.";
         if (diaSemana === 3) esUrgente = true;
@@ -72,9 +73,7 @@ const subscribeToStock = () => {
         }).subscribe();
 };
 
-// --- 3. LÓGICA DE CARRITO (MEJORADA) ---
-
-// Agregar producto (Sin abrir carrito, solo feedback)
+// --- 3. LÓGICA DE CARRITO ---
 const addToCart = (productId, variantIndex) => {
     const product = products.find(p => p.id === productId);
     const variant = product.variantes[variantIndex];
@@ -95,23 +94,18 @@ const addToCart = (productId, variantIndex) => {
         });
     }
     updateCartUI();
-    
-    // ANIMACIONES (Feedback Visual)
-    animateCartIcon(); // El ícono del carrito salta
-    showAddedToast(product.nombre); // Mensaje flotante verde
+    animateCartIcon(); 
+    showAddedToast(product.nombre);
 };
 
-// Cambiar cantidad (+/-) desde la canasta
 const changeCartQuantity = (uniqueId, change) => {
     const itemIndex = cart.findIndex(item => item.uniqueId === uniqueId);
     if (itemIndex === -1) return;
 
     const newQuantity = cart[itemIndex].quantity + change;
-
     if (newQuantity > 0) {
         cart[itemIndex].quantity = newQuantity;
     } else {
-        // Si baja a 0, preguntamos o eliminamos directo? Eliminamos directo por UX rápida.
         cart.splice(itemIndex, 1);
     }
     updateCartUI();
@@ -128,7 +122,6 @@ const updateCartUI = () => {
     const cartTotalElement = document.getElementById('cart-total');
     const cartItemsContainer = document.getElementById('cart-items');
 
-    // 1. Contador Flotante
     const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
     cartCountElement.textContent = totalItems;
     
@@ -140,11 +133,9 @@ const updateCartUI = () => {
         checkoutBtn.disabled = true;
     }
 
-    // 2. Total Monetario
     const totalPrice = cart.reduce((sum, item) => sum + (item.precio * item.quantity), 0);
     cartTotalElement.textContent = formatMoney(totalPrice) + "*";
 
-    // 3. Renderizar Items con Botones +/-
     if (cart.length === 0) {
         cartItemsContainer.innerHTML = `
             <div class="flex flex-col items-center justify-center h-full text-gray-400">
@@ -160,17 +151,11 @@ const updateCartUI = () => {
                     <div>
                         <h5 class="font-bold text-sm text-gray-800 dark:text-white">${item.nombre}</h5>
                         <p class="text-xs text-agro-primary font-bold">${item.variantName}</p>
-                        
                         <div class="flex items-center gap-3 mt-2 bg-gray-50 dark:bg-slate-700 rounded-full px-1 w-fit">
-                            <button class="qty-btn w-6 h-6 rounded-full flex items-center justify-center text-gray-500 hover:bg-white hover:shadow-sm transition" data-action="decrease" data-id="${item.uniqueId}">
-                                <i class="fa-solid fa-minus text-[10px]"></i>
-                            </button>
+                            <button class="qty-btn w-6 h-6 rounded-full flex items-center justify-center text-gray-500 hover:bg-white hover:shadow-sm transition" data-action="decrease" data-id="${item.uniqueId}"><i class="fa-solid fa-minus text-[10px]"></i></button>
                             <span class="text-xs font-bold w-4 text-center dark:text-white">${item.quantity}</span>
-                            <button class="qty-btn w-6 h-6 rounded-full flex items-center justify-center text-agro-primary hover:bg-white hover:shadow-sm transition" data-action="increase" data-id="${item.uniqueId}">
-                                <i class="fa-solid fa-plus text-[10px]"></i>
-                            </button>
+                            <button class="qty-btn w-6 h-6 rounded-full flex items-center justify-center text-agro-primary hover:bg-white hover:shadow-sm transition" data-action="increase" data-id="${item.uniqueId}"><i class="fa-solid fa-plus text-[10px]"></i></button>
                         </div>
-
                     </div>
                 </div>
                 <div class="flex flex-col items-end gap-1">
@@ -180,16 +165,13 @@ const updateCartUI = () => {
             </div>
         `).join('');
 
-        // Nota legal
         const alertDiv = document.createElement('div');
         alertDiv.className = "bg-orange-50 dark:bg-orange-900/20 border border-orange-200 p-3 rounded-lg text-xs text-orange-800 dark:text-orange-200 mt-4 flex gap-2";
         alertDiv.innerHTML = `<i class="fa-solid fa-triangle-exclamation mt-0.5"></i> <p><strong>Nota:</strong> Precios sujetos a cambios leves según cosecha.</p>`;
         cartItemsContainer.appendChild(alertDiv);
 
-        // ASIGNAR EVENTOS (+/-)
         document.querySelectorAll('.qty-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
-                // stopPropagation evita clicks fantasmas si hubiera contenedores clicables
                 e.stopPropagation();
                 const uniqueId = e.currentTarget.getAttribute('data-id');
                 const action = e.currentTarget.getAttribute('data-action');
@@ -203,18 +185,20 @@ const updateCartUI = () => {
     }
 };
 
-// --- 4. CHECKOUT (SOLUCIÓN DEFINITIVA A BLOQUEOS) ---
+// --- 4. CHECKOUT (CORREGIDO Y COMPLETO) ---
 const checkout = () => {
     if (cart.length === 0) return;
 
-    // 1. Pedir datos (Usando prompt estándar)
+    // 1. Pedir datos
     const nombre = prompt("👤 Por favor, ingresa tu Nombre Completo para el pedido:");
     if (!nombre || nombre.trim() === "") return; 
 
     const direccion = prompt("📍 Ingresa tu Dirección de Entrega (Conjunto/Torre/Apto):");
     if (!direccion || direccion.trim() === "") return; 
 
-    // 2. Feedback visual
+    // Opcional: Pedir nota adicional si es importante
+    // const notas = prompt("📝 ¿Alguna nota adicional? (Opcional):") || "";
+
     const checkoutBtn = document.getElementById('checkout-btn');
     const btnTextOriginal = checkoutBtn.innerHTML;
     checkoutBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Abriendo WhatsApp...';
@@ -222,8 +206,7 @@ const checkout = () => {
 
     const totalPrice = cart.reduce((sum, item) => sum + (item.precio * item.quantity), 0);
 
-    // 3. BACKUP EN NUBE (Fire & Forget)
-    // No usamos 'await' para no detener el hilo principal y abrir WhatsApp rápido
+    // 2. BACKUP EN NUBE (Fire & Forget - Sin await)
     supabase
         .from('pedidos')
         .insert([{ 
@@ -235,7 +218,7 @@ const checkout = () => {
         }])
         .then(({ error }) => { if (error) console.warn("Error backup nube:", error); });
 
-    // 4. CONSTRUIR URL
+    // 3. CONSTRUIR MENSAJE COMPLETO (¡VITAL!)
     let message = `¡Hola amigos de La Floresta! 👋%0A%0A`;
     message += `Soy *${nombre}*. Me gustaría pedir:%0A%0A`;
     
@@ -245,44 +228,52 @@ const checkout = () => {
     
     message += `%0A💰 *VALOR APROXIMADO: ${formatMoney(totalPrice)}*`;
     message += `%0A_(Entiendo que este valor es una referencia)_`;
-    message += `%0A%0A----------------------------------%0A`;
-    message += `📍 *Dirección:* ${direccion}%0A`;
-    message += `📦 *Entrega:* Miércoles o Sábado%0A`;
-    message += `🤝 *Pago:* Contra Entrega`;
     
-    const whatsappUrl = `https://wa.me/${WHATSAPP_NUMBER}?text=${message}`;
+    // --- AQUÍ ESTÁ LA INFORMACIÓN VITAL RESTAURADA ---
+    message += `%0A%0A----------------------------------%0A`;
+    message += `📦 *Confirmación de Entrega:*%0A`;
+    message += `Tengo presente que las entregas son los *Miércoles y Sábados*.%0A`;
+    message += `🤝 El pago lo haré *Contra Entrega* una vez reciba y verifique la calidad de los productos.%0A`;
+    // ------------------------------------------------
+    
+    message += `%0A📍 *Dirección:* ${direccion}`;
+    message += `%0A📝 *Nota:* (Escribe aquí si necesitas algo más)`;
+    
+    // 4. LÓGICA INTELIGENTE DE APERTURA (WEB vs APP)
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    
+    if (isMobile) {
+        // En celular: Usamos location.href con api.whatsapp.com para forzar la App
+        // Esto evita bloqueos de popups en Chrome/Safari móvil
+        window.location.href = `https://api.whatsapp.com/send?phone=${WHATSAPP_NUMBER}&text=${message}`;
+    } else {
+        // En PC: Usamos window.open con web.whatsapp.com
+        // Esto abre una pestaña nueva para que NO se pierda la tienda
+        window.open(`https://web.whatsapp.com/send?phone=${WHATSAPP_NUMBER}&text=${message}`, '_blank');
+    }
 
-    // 5. NAVEGACIÓN SEGURA (ESTO EVITA EL BLOQUEO)
-    // Usamos location.href para navegar en la misma pestaña. 
-    // Los bloqueadores de popups NO bloquean esto.
-    window.location.href = whatsappUrl;
-
-    // Restaurar botón (por si el usuario regresa con el botón Atrás)
+    // Restaurar botón
     setTimeout(() => {
         checkoutBtn.innerHTML = btnTextOriginal;
         checkoutBtn.disabled = false;
     }, 2000);
 };
 
-// --- 5. UI HELPERS & ANIMACIONES ---
-
+// --- 5. UI HELPERS ---
 const animateCartIcon = () => {
     const cartBtn = document.getElementById('cart-btn');
     cartBtn.classList.remove('animate-bounce');
-    void cartBtn.offsetWidth; // Reiniciar animación
+    void cartBtn.offsetWidth; 
     cartBtn.classList.add('animate-bounce');
-    // Quitar la clase después de un segundo
     setTimeout(() => cartBtn.classList.remove('animate-bounce'), 1000);
 };
 
 const showAddedToast = (productName) => {
     const toast = document.createElement('div');
-    // Estilo verde "Éxito"
     toast.className = "fixed top-24 right-4 z-50 bg-green-600 text-white px-5 py-3 rounded-lg shadow-xl flex items-center gap-3 animate-fade-in border-2 border-green-400";
     toast.innerHTML = `<i class="fa-solid fa-check-circle text-xl"></i> <div><p class="text-xs font-bold uppercase opacity-80">Agregado</p><p class="font-bold text-sm">${productName}</p></div>`;
     document.body.appendChild(toast);
     
-    // Auto-eliminar
     setTimeout(() => {
         toast.style.transition = 'opacity 0.5s ease';
         toast.style.opacity = '0';
@@ -290,11 +281,10 @@ const showAddedToast = (productName) => {
     }, 2000);
 };
 
-// --- RENDERIZADO GLOBAL ---
 const grid = document.getElementById('product-grid');
 const renderProducts = (lista) => {
     if (lista.length > 0) {
-        grid.innerHTML = lista.map(product => ProductCard(product, false)).join(''); // False = Modo Cliente
+        grid.innerHTML = lista.map(product => ProductCard(product, false)).join('');
         
         document.querySelectorAll('.add-to-cart-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
@@ -303,7 +293,6 @@ const renderProducts = (lista) => {
                 const select = document.querySelector(`.variant-selector[data-id="${id}"]`);
                 const variantIndex = parseInt(select.value);
                 addToCart(id, variantIndex);
-                // NOTA: Ya no llamamos a openCart() aquí
             });
         });
     } else {
@@ -368,7 +357,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     await fetchStock(); 
     subscribeToStock();
 
-    // Eventos UI
     const cartBtn = document.getElementById('cart-btn');
     const closeCartBtn = document.getElementById('close-cart');
     const cartOverlay = document.getElementById('cart-overlay');
