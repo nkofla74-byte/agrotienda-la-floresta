@@ -72,8 +72,9 @@ const subscribeToStock = () => {
         }).subscribe();
 };
 
-// --- 3. LÓGICA DE CARRITO (NUEVA) ---
+// --- 3. LÓGICA DE CARRITO (MEJORADA) ---
 
+// Agregar producto (Sin abrir carrito, solo feedback)
 const addToCart = (productId, variantIndex) => {
     const product = products.find(p => p.id === productId);
     const variant = product.variantes[variantIndex];
@@ -95,20 +96,22 @@ const addToCart = (productId, variantIndex) => {
     }
     updateCartUI();
     
-    // FEEDBACK VISUAL (En vez de abrir el carrito)
-    animateCartIcon();
-    showAddedToast(product.nombre);
+    // ANIMACIONES (Feedback Visual)
+    animateCartIcon(); // El ícono del carrito salta
+    showAddedToast(product.nombre); // Mensaje flotante verde
 };
 
-// Función para cambiar cantidad (+/-) desde la canasta
+// Cambiar cantidad (+/-) desde la canasta
 const changeCartQuantity = (uniqueId, change) => {
     const itemIndex = cart.findIndex(item => item.uniqueId === uniqueId);
     if (itemIndex === -1) return;
 
-    cart[itemIndex].quantity += change;
+    const newQuantity = cart[itemIndex].quantity + change;
 
-    // Si baja a 0, eliminar
-    if (cart[itemIndex].quantity <= 0) {
+    if (newQuantity > 0) {
+        cart[itemIndex].quantity = newQuantity;
+    } else {
+        // Si baja a 0, preguntamos o eliminamos directo? Eliminamos directo por UX rápida.
         cart.splice(itemIndex, 1);
     }
     updateCartUI();
@@ -125,7 +128,7 @@ const updateCartUI = () => {
     const cartTotalElement = document.getElementById('cart-total');
     const cartItemsContainer = document.getElementById('cart-items');
 
-    // Actualizar contador flotante
+    // 1. Contador Flotante
     const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
     cartCountElement.textContent = totalItems;
     
@@ -137,11 +140,11 @@ const updateCartUI = () => {
         checkoutBtn.disabled = true;
     }
 
-    // Actualizar Total
+    // 2. Total Monetario
     const totalPrice = cart.reduce((sum, item) => sum + (item.precio * item.quantity), 0);
     cartTotalElement.textContent = formatMoney(totalPrice) + "*";
 
-    // Renderizar Items
+    // 3. Renderizar Items con Botones +/-
     if (cart.length === 0) {
         cartItemsContainer.innerHTML = `
             <div class="flex flex-col items-center justify-center h-full text-gray-400">
@@ -151,36 +154,43 @@ const updateCartUI = () => {
         `;
     } else {
         cartItemsContainer.innerHTML = cart.map(item => `
-            <div class="flex justify-between items-center bg-white dark:bg-gray-800 p-3 rounded-xl border border-gray-100 dark:border-gray-700 mb-2 animate-fade-in">
+            <div class="flex justify-between items-center bg-white dark:bg-gray-800 p-3 rounded-xl border border-gray-100 dark:border-gray-700 mb-2 animate-fade-in select-none">
                 <div class="flex items-center gap-3">
                     <img src="${item.imagen}" class="w-12 h-12 rounded-lg object-cover bg-gray-100">
                     <div>
                         <h5 class="font-bold text-sm text-gray-800 dark:text-white">${item.nombre}</h5>
                         <p class="text-xs text-agro-primary font-bold">${item.variantName}</p>
                         
-                        <div class="flex items-center gap-2 mt-1">
-                            <button class="qty-btn w-6 h-6 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-600 font-bold text-xs transition" data-action="decrease" data-id="${item.uniqueId}">-</button>
-                            <span class="text-sm font-medium w-4 text-center">${item.quantity}</span>
-                            <button class="qty-btn w-6 h-6 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-600 font-bold text-xs transition" data-action="increase" data-id="${item.uniqueId}">+</button>
+                        <div class="flex items-center gap-3 mt-2 bg-gray-50 dark:bg-slate-700 rounded-full px-1 w-fit">
+                            <button class="qty-btn w-6 h-6 rounded-full flex items-center justify-center text-gray-500 hover:bg-white hover:shadow-sm transition" data-action="decrease" data-id="${item.uniqueId}">
+                                <i class="fa-solid fa-minus text-[10px]"></i>
+                            </button>
+                            <span class="text-xs font-bold w-4 text-center dark:text-white">${item.quantity}</span>
+                            <button class="qty-btn w-6 h-6 rounded-full flex items-center justify-center text-agro-primary hover:bg-white hover:shadow-sm transition" data-action="increase" data-id="${item.uniqueId}">
+                                <i class="fa-solid fa-plus text-[10px]"></i>
+                            </button>
                         </div>
+
                     </div>
                 </div>
                 <div class="flex flex-col items-end gap-1">
-                    <span class="font-bold text-sm">~${formatMoney(item.precio * item.quantity)}</span>
-                    <button class="remove-btn text-red-400 text-xs hover:text-red-600 hover:underline transition" data-unique-id="${item.uniqueId}">Eliminar</button>
+                    <span class="font-bold text-sm text-gray-700 dark:text-gray-200">~${formatMoney(item.precio * item.quantity)}</span>
+                    <button class="remove-btn text-red-400 text-[10px] hover:text-red-600 hover:underline transition" data-unique-id="${item.uniqueId}">Eliminar</button>
                 </div>
             </div>
         `).join('');
 
-        // Agregar aviso legal
+        // Nota legal
         const alertDiv = document.createElement('div');
         alertDiv.className = "bg-orange-50 dark:bg-orange-900/20 border border-orange-200 p-3 rounded-lg text-xs text-orange-800 dark:text-orange-200 mt-4 flex gap-2";
-        alertDiv.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> <p><strong>Nota:</strong> Precios sujetos a cambios leves según cosecha.</p>`;
+        alertDiv.innerHTML = `<i class="fa-solid fa-triangle-exclamation mt-0.5"></i> <p><strong>Nota:</strong> Precios sujetos a cambios leves según cosecha.</p>`;
         cartItemsContainer.appendChild(alertDiv);
 
-        // ASIGNAR EVENTOS A LOS NUEVOS BOTONES (+ / - / Eliminar)
+        // ASIGNAR EVENTOS (+/-)
         document.querySelectorAll('.qty-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
+                // stopPropagation evita clicks fantasmas si hubiera contenedores clicables
+                e.stopPropagation();
                 const uniqueId = e.currentTarget.getAttribute('data-id');
                 const action = e.currentTarget.getAttribute('data-action');
                 changeCartQuantity(uniqueId, action === 'increase' ? 1 : -1);
@@ -193,25 +203,27 @@ const updateCartUI = () => {
     }
 };
 
-// --- 4. CHECKOUT (CORREGIDO - NO BLOQUEA WHATSAPP) ---
+// --- 4. CHECKOUT (SOLUCIÓN DEFINITIVA A BLOQUEOS) ---
 const checkout = () => {
     if (cart.length === 0) return;
 
+    // 1. Pedir datos (Usando prompt estándar)
     const nombre = prompt("👤 Por favor, ingresa tu Nombre Completo para el pedido:");
     if (!nombre || nombre.trim() === "") return; 
 
     const direccion = prompt("📍 Ingresa tu Dirección de Entrega (Conjunto/Torre/Apto):");
     if (!direccion || direccion.trim() === "") return; 
 
-    // Feedback visual
+    // 2. Feedback visual
     const checkoutBtn = document.getElementById('checkout-btn');
     const btnTextOriginal = checkoutBtn.innerHTML;
-    checkoutBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Procesando...';
+    checkoutBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Abriendo WhatsApp...';
     checkoutBtn.disabled = true;
 
     const totalPrice = cart.reduce((sum, item) => sum + (item.precio * item.quantity), 0);
 
-    // GUARDAR EN SUPABASE (Sin await para no bloquear)
+    // 3. BACKUP EN NUBE (Fire & Forget)
+    // No usamos 'await' para no detener el hilo principal y abrir WhatsApp rápido
     supabase
         .from('pedidos')
         .insert([{ 
@@ -221,9 +233,9 @@ const checkout = () => {
             total_estimado: totalPrice, 
             estado: 'pendiente' 
         }])
-        .then(({ error }) => { if (error) console.warn("Error backup:", error); });
+        .then(({ error }) => { if (error) console.warn("Error backup nube:", error); });
 
-    // GENERAR WHATSAPP
+    // 4. CONSTRUIR URL
     let message = `¡Hola amigos de La Floresta! 👋%0A%0A`;
     message += `Soy *${nombre}*. Me gustaría pedir:%0A%0A`;
     
@@ -238,47 +250,52 @@ const checkout = () => {
     message += `📦 *Entrega:* Miércoles o Sábado%0A`;
     message += `🤝 *Pago:* Contra Entrega`;
     
-    // ABRIR WHATSAPP
-    window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${message}`, '_blank');
-    
-    // Restaurar botón
+    const whatsappUrl = `https://wa.me/${WHATSAPP_NUMBER}?text=${message}`;
+
+    // 5. NAVEGACIÓN SEGURA (ESTO EVITA EL BLOQUEO)
+    // Usamos location.href para navegar en la misma pestaña. 
+    // Los bloqueadores de popups NO bloquean esto.
+    window.location.href = whatsappUrl;
+
+    // Restaurar botón (por si el usuario regresa con el botón Atrás)
     setTimeout(() => {
         checkoutBtn.innerHTML = btnTextOriginal;
         checkoutBtn.disabled = false;
-    }, 1000);
+    }, 2000);
 };
 
 // --- 5. UI HELPERS & ANIMACIONES ---
 
-// Animación del carrito al agregar
 const animateCartIcon = () => {
     const cartBtn = document.getElementById('cart-btn');
-    // Reiniciar animación si ya estaba corriendo
     cartBtn.classList.remove('animate-bounce');
-    void cartBtn.offsetWidth; // Trigger reflow
+    void cartBtn.offsetWidth; // Reiniciar animación
     cartBtn.classList.add('animate-bounce');
+    // Quitar la clase después de un segundo
     setTimeout(() => cartBtn.classList.remove('animate-bounce'), 1000);
 };
 
-// Toast simple "Agregado al carrito"
 const showAddedToast = (productName) => {
     const toast = document.createElement('div');
-    toast.className = "fixed top-24 right-4 z-50 bg-green-600 text-white px-4 py-3 rounded-lg shadow-xl flex items-center gap-3 animate-fade-in";
-    toast.innerHTML = `<i class="fa-solid fa-check-circle"></i> <span><strong>${productName}</strong> agregado</span>`;
+    // Estilo verde "Éxito"
+    toast.className = "fixed top-24 right-4 z-50 bg-green-600 text-white px-5 py-3 rounded-lg shadow-xl flex items-center gap-3 animate-fade-in border-2 border-green-400";
+    toast.innerHTML = `<i class="fa-solid fa-check-circle text-xl"></i> <div><p class="text-xs font-bold uppercase opacity-80">Agregado</p><p class="font-bold text-sm">${productName}</p></div>`;
     document.body.appendChild(toast);
+    
+    // Auto-eliminar
     setTimeout(() => {
+        toast.style.transition = 'opacity 0.5s ease';
         toast.style.opacity = '0';
         setTimeout(() => toast.remove(), 500);
     }, 2000);
 };
 
-// Renderizado de productos
+// --- RENDERIZADO GLOBAL ---
 const grid = document.getElementById('product-grid');
 const renderProducts = (lista) => {
     if (lista.length > 0) {
-        grid.innerHTML = lista.map(product => ProductCard(product, false)).join('');
+        grid.innerHTML = lista.map(product => ProductCard(product, false)).join(''); // False = Modo Cliente
         
-        // Eventos Agregar
         document.querySelectorAll('.add-to-cart-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 if(e.currentTarget.disabled) return;
@@ -302,7 +319,6 @@ window.updateCardPrice = (selectElement, productId) => {
     if(priceDisplay) priceDisplay.textContent = formatMoney(newPrice);
 };
 
-// Notificaciones aleatorias de ventas (Social Proof)
 const showToast = () => {
     const nombres = ["Doña Gloria", "Don Jorge", "María", "Camilo", "La Sra. Rosa"];
     const randomName = nombres[Math.floor(Math.random() * nombres.length)];
