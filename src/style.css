@@ -87,3 +87,8 @@ html {
 .cart-items::-webkit-scrollbar { width: 6px; }
 .cart-items::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 4px; }
 .dark .cart-items::-webkit-scrollbar-thumb { background-color: #4b5563; }
+
+/* Agrega esto al final de style.css si quieres asegurar el estilo */
+.qty-btn {
+  @apply w-6 h-6 flex items-center justify-center rounded-full bg-gray-200 text-gray-600 hover:bg-agro-primary hover:text-white transition font-bold text-xs;
+}

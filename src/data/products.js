@@ -8,35 +8,35 @@ export const products = [
     categoria: "Frutas",
     disponible: true,
     variantes: [
-      { nombre: "Libra (500g)", precio: 3500 },
-      { nombre: "Kilo (1000g)", precio: 6500 },
-      { nombre: "Bolsa Familiar (3kg)", precio: 18000 }
+      { nombre: "Libra (500g)", precio: 4200 }, // Ajustado base mercado
+      { nombre: "Kilo (1000g)", precio: 8000 }, // Ref: Costo ~6.5k + 20%
+      { nombre: "Bolsa Familiar (3kg)", precio: 22000 }
     ]
   },
   {
     id: 2,
     nombre: "Aguacate Choquet",
     descripcion: "De gran tamaño y sabor suave. Ideal para ensaladas.",
-    imagen: "/images/choquete.jpg", // Foto genérica (sugerencia: cambiar)
+    imagen: "/images/choquete.jpg",
     categoria: "Frutas",
     disponible: true,
     variantes: [
-      { nombre: "Libra", precio: 3000 },
-      { nombre: "Kilo", precio: 5500 },
-      { nombre: "Paquete (3 Und grandes)", precio: 15000 }
+      { nombre: "Libra", precio: 4500 },
+      { nombre: "Kilo", precio: 8500 }, // Ref: Costo ~7k + 20%
+      { nombre: "Paquete (3 Und grandes)", precio: 24000 }
     ]
   },
   {
     id: 3,
     nombre: "Aguacate Semil",
     descripcion: "Variedad resistente y de pulpa firme.",
-    imagen: "/images/cemil.jpg", // Foto genérica (sugerencia: cambiar)
+    imagen: "/images/cemil.jpg",
     categoria: "Frutas",
     disponible: true,
     variantes: [
-      { nombre: "Libra", precio: 3000 },
-      { nombre: "Kilo", precio: 5500 },
-      { nombre: "Bolsa (3kg)", precio: 15000 }
+      { nombre: "Libra", precio: 3800 },
+      { nombre: "Kilo", precio: 7000 }, // Subida moderada
+      { nombre: "Bolsa (3kg)", precio: 19000 }
     ]
   },
   {
@@ -47,9 +47,9 @@ export const products = [
     categoria: "Frutas",
     disponible: true,
     variantes: [
-      { nombre: "Libra", precio: 3200 },
-      { nombre: "Kilo", precio: 6000 },
-      { nombre: "Bolsa (3kg)", precio: 17000 }
+      { nombre: "Libra", precio: 6800 }, // ⚠️ Subida fuerte por escasez
+      { nombre: "Kilo", precio: 13500 }, // Ref: Costo ~11k + 20% margen
+      { nombre: "Bolsa (3kg)", precio: 38000 }
     ]
   },
 
@@ -62,9 +62,9 @@ export const products = [
     categoria: "Verduras",
     disponible: true,
     variantes: [
-      { nombre: "Libra", precio: 2000 },
-      { nombre: "Kilo", precio: 3800 },
-      { nombre: "Bolsa (5kg)", precio: 18000 }
+      { nombre: "Libra", precio: 2400 }, // +20% sobre tu precio anterior
+      { nombre: "Kilo", precio: 4600 },
+      { nombre: "Bolsa (5kg)", precio: 22000 }
     ]
   },
 
@@ -73,13 +73,13 @@ export const products = [
     id: 6,
     nombre: "Plátano Verde",
     descripcion: "Ideal para patacones crocantes o sopas.",
-    imagen: "/images/platano.jpg", // Usando imagen de verde disponible
+    imagen: "/images/platano.jpg",
     categoria: "Verduras",
     disponible: true,
     variantes: [
-      { nombre: "Libra", precio: 1800 },
-      { nombre: "Kilo", precio: 3500 },
-      { nombre: "Paquete (5 Und)", precio: 8000 }
+      { nombre: "Libra", precio: 2400 },
+      { nombre: "Kilo", precio: 4600 }, // Ref: Costo ~3.8k + 20%
+      { nombre: "Paquete (5 Und)", precio: 10000 }
     ]
   },
   {
@@ -90,35 +90,35 @@ export const products = [
     categoria: "Verduras",
     disponible: true,
     variantes: [
-      { nombre: "Libra", precio: 1800 },
-      { nombre: "Kilo", precio: 3500 },
-      { nombre: "Paquete (5 Und)", precio: 8000 }
+      { nombre: "Libra", precio: 2400 },
+      { nombre: "Kilo", precio: 4600 }, // Ref: Costo ~3.8k + 20%
+      { nombre: "Paquete (5 Und)", precio: 10000 }
     ]
   },
   {
     id: 8,
     nombre: "Banano Común",
     descripcion: "La fruta infaltable. Energía natural.",
-    imagen: "/images/bananomaduro.jpg", // Sugerencia: Actualizar foto a banano maduro
+    imagen: "/images/bananomaduro.jpg",
     categoria: "Frutas",
     disponible: true,
     variantes: [
-      { nombre: "Libra (Gajo peq)", precio: 1500 },
-      { nombre: "Kilo", precio: 2800 },
-      { nombre: "Bolsa (Gajo grande)", precio: 5000 }
+      { nombre: "Libra (Gajo peq)", precio: 1800 },
+      { nombre: "Kilo", precio: 3400 }, // Ref: Costo ~2.8k + 20%
+      { nombre: "Bolsa (Gajo grande)", precio: 6000 }
     ]
   },
   {
     id: 9,
     nombre: "Banano Bocadillo",
     descripcion: "Pequeño, dulce y delicioso. El favorito de los niños.",
-    imagen: "/images/bocadillo.jpg", // Sugerencia: Actualizar foto
+    imagen: "/images/bocadillo.jpg",
     categoria: "Frutas",
     disponible: true,
     variantes: [
-      { nombre: "Libra", precio: 2000 },
-      { nombre: "Kilo", precio: 3800 },
-      { nombre: "Paquete (Gajo grande)", precio: 6000 }
+      { nombre: "Libra", precio: 2400 },
+      { nombre: "Kilo", precio: 4600 }, // +20% sobre tu precio anterior
+      { nombre: "Paquete (Gajo grande)", precio: 7500 }
     ]
   },
 
@@ -131,9 +131,9 @@ export const products = [
     categoria: "Frutas",
     disponible: true,
     variantes: [
-      { nombre: "Libra", precio: 2800 },
-      { nombre: "Kilo", precio: 5000 },
-      { nombre: "Bolsa (10kg)", precio: 45000 }
+      { nombre: "Libra", precio: 3400 }, // +20% sobre tu precio anterior
+      { nombre: "Kilo", precio: 6000 },
+      { nombre: "Bolsa (10kg)", precio: 54000 }
     ]
   },
 
@@ -146,9 +146,9 @@ export const products = [
     categoria: "Despensa",
     disponible: true,
     variantes: [
-      { nombre: "Unidad (Par)", precio: 4000 },
-      { nombre: "Paca (12 Pares)", precio: 45000 },
-      { nombre: "Caja (24 Pares)", precio: 85000 }
+      { nombre: "Unidad (unidad)", precio: 4800 }, // +20% sobre tu precio anterior
+      { nombre: "Paca (25 unidades ", precio: 95000},
+      { nombre: "Caja (50unidades)", precio: 190000 }
     ]
   }
 ];

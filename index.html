@@ -69,6 +69,20 @@
         
         <div class="max-w-6xl mx-auto px-4 relative z-20 animate-fade-in">
             
+            <div id="deadline-banner" class="hidden mb-8 mx-auto max-w-2xl transform hover:scale-105 transition-transform duration-300 cursor-default">
+                <div class="bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-l-4 border-orange-500 shadow-2xl rounded-r-xl p-4 flex flex-col sm:flex-row items-center sm:items-start gap-4 text-left">
+                    <div class="bg-orange-100 dark:bg-orange-900/30 p-2 rounded-full text-orange-600 dark:text-orange-400">
+                        <i class="fa-solid fa-clock text-2xl"></i>
+                    </div>
+                    <div>
+                        <h4 class="font-bold text-gray-800 dark:text-white text-base uppercase tracking-wide flex items-center gap-2">
+                             Próximo Cierre de Pedidos
+                             <span id="deadline-badge" class="bg-red-500 text-white text-[10px] px-2 py-0.5 rounded-full hidden animate-pulse">¡HOY!</span>
+                        </h4>
+                        <p id="deadline-text" class="text-gray-600 dark:text-gray-300 text-sm font-medium mt-1">Calculando fechas...</p>
+                    </div>
+                </div>
+            </div>
             <div class="inline-flex items-center gap-2 py-2 px-5 rounded-full bg-white/20 backdrop-blur-md border border-white/40 text-white text-sm font-bold mb-8 tracking-wide uppercase shadow-lg animate-bounce">
                 <i class="fa-solid fa-location-dot text-yellow-300"></i> Norte del Tolima 🇨🇴
             </div>
@@ -223,27 +237,28 @@
                         </li>
                         <li class="flex items-center gap-3 group">
                             <i class="fa-brands fa-whatsapp text-agro-primary group-hover:text-white transition"></i>
-                            <a href="https://wa.me/57300XXXXXXX" target="_blank" class="hover:text-white transition cursor-pointer">
+                            <a href="https://wa.me/573122339294" target="_blank" class="hover:text-white transition cursor-pointer">
                                 +57 3122339294
                             </a>
                         </li>
                     </ul>
                 </div>
 
-                <div class="rounded-xl overflow-hidden shadow-lg border-2 border-white/10">
-                     <iframe 
-                        src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3975.6429927978054!2d-75.0441!3d5.1528!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zNcKwMDknMTAuMSJOIDc1wrQwMiczOC44Ilc!5e0!3m2!1ses!2sco!4v1620000000000!5m2!1ses!2sco" 
-                        width="100%" 
-                        height="200" 
-                        style="border:0;" 
-                        allowfullscreen="" 
-                        loading="lazy" 
-                        referrerpolicy="no-referrer-when-downgrade">
-                    </iframe>
-                </div>
+              <div class="rounded-xl overflow-hidden shadow-lg border-2 border-white/10 h-[200px]">
+    <iframe 
+        src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3975.8!2d-75.04!3d5.15!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x8e47458609c3c5ad%3A0x68545851246c6530!2sFresno%2C%20Tolima!5e0!3m2!1ses!2sco!4v1680000000000!5m2!1ses!2sco" 
+        width="100%" 
+        height="100%" 
+        style="border:0;" 
+        allowfullscreen="" 
+        loading="lazy" 
+        referrerpolicy="no-referrer-when-downgrade">
+    </iframe>
+</div>
             </div>
             <div class="border-t border-white/10 pt-8 text-center">
                 <p class="text-xs text-gray-400">© 2025 Agrotienda La Floresta. Hecho con 💚 en Tolima.</p>
+                <p class="text-xs text-gray-400">desarrollado por jrxdevs  💚 by yeferson rodriguez guzman
             </div>
         </div>
     </footer>
@@ -271,6 +286,43 @@
     </aside>
 
     <div id="toast-container" class="fixed bottom-6 left-6 z-50 flex flex-col gap-4 pointer-events-none"></div>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const ahora = new Date();
+            const diaSemana = ahora.getDay(); // 0=Dom, 1=Lun, ..., 6=Sab
+            const hora = ahora.getHours();
+            
+            // Lógica: Cierre Domingo 6pm (para Lunes) y Miércoles 6pm (para Jueves)
+            // Despachos: Lunes (llega martes/mier) y Jueves (llega vie/sab)
+            
+            let texto = "";
+            let urgencia = false;
+            
+            // Ciclo 1: Jueves a Domingo 6pm -> Despacho Lunes
+            if (diaSemana === 4 || diaSemana === 5 || diaSemana === 6 || (diaSemana === 0 && hora < 18)) {
+                texto = "Pide antes del DOMINGO 6PM. Despachamos el Lunes.";
+                if (diaSemana === 0) urgencia = true; // Si es domingo, es urgente
+            } 
+            // Ciclo 2: Domingo 6pm a Miércoles 6pm -> Despacho Jueves
+            else {
+                texto = "Pide antes del MIÉRCOLES 6PM. Despachamos el Jueves.";
+                if (diaSemana === 3) urgencia = true; // Si es miércoles, es urgente
+            }
+
+            const banner = document.getElementById('deadline-banner');
+            const deadlineText = document.getElementById('deadline-text');
+            const badge = document.getElementById('deadline-badge');
+
+            if (deadlineText) deadlineText.textContent = texto;
+            if (banner) banner.classList.remove('hidden');
+            
+            if (urgencia && badge) {
+                badge.classList.remove('hidden'); // Muestra la etiqueta "HOY" parpadeando
+            }
+        });
+    </script>
+
     <script type="module" src="/src/main.js"></script>
   </body>
 </html>
