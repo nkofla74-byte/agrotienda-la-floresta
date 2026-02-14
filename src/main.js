@@ -1,15 +1,14 @@
 import './style.css';
-import { products as initialProducts } from './data/products';
 import { ProductCard } from './components/ProductCard';
 import { formatMoney } from './utils/formatters';
 import { supabase } from './supabaseClient'; 
 
 // --- ESTADO ---
-let products = [...initialProducts]; 
+let products = []; 
 let cart = [];
-const WHATSAPP_NUMBER = "573122339294"; 
+const WHATSAPP_NUMBER = "573182359277"; 
 
-// --- 1. LÓGICA DE FECHAS DE CORTE (DEADLINES) ---
+// --- 1. LÓGICA DE FECHAS (Sin cambios) ---
 const actualizarDeadlineBanner = () => {
     const ahora = new Date();
     const diaSemana = ahora.getDay(); 
@@ -23,16 +22,11 @@ const actualizarDeadlineBanner = () => {
 
     let texto = "";
     let esUrgente = false;
-    let proximoDespacho = "";
 
-    // Ciclo 1: Jueves a Domingo 6pm -> Despacho Lunes (Entrega Martes/Miér)
     if (diaSemana === 4 || diaSemana === 5 || diaSemana === 6 || (diaSemana === 0 && hora < 18)) {
-        proximoDespacho = "Lunes";
         texto = "Haz tu pedido antes del <strong>DOMINGO 6:00 PM</strong>. Recibes el Martes/Miércoles.";
         if (diaSemana === 0) esUrgente = true;
     } else {
-        // Ciclo 2: Domingo 6pm a Miércoles 6pm -> Despacho Jueves (Entrega Vie/Sáb)
-        proximoDespacho = "Jueves";
         texto = "Haz tu pedido antes del <strong>MIÉRCOLES 6:00 PM</strong>. Recibes el Viernes/Sábado.";
         if (diaSemana === 3) esUrgente = true;
     }
@@ -47,55 +41,91 @@ const actualizarDeadlineBanner = () => {
     }
 };
 
-// --- 2. GESTIÓN DE STOCK (SUPABASE) ---
-const fetchStock = async () => {
-    const { data, error } = await supabase.from('inventario').select('*');
-    if (error) { console.error('Error cargando stock:', error); return; }
+// --- 2. GESTIÓN DE PRODUCTOS ---
+const fetchProducts = async () => {
+    const grid = document.getElementById('product-grid');
     
-    if (data) {
-        products = products.map(p => {
-            const stockInfo = data.find(item => item.id === p.id);
-            return { ...p, disponible: stockInfo ? stockInfo.disponible : true };
-        });
-        renderProducts(products); 
+    try {
+        const { data: productosDB, error } = await supabase
+            .from('productos')
+            .select(`*, variantes(*), categorias(nombre)`)
+            .eq('activo', true)
+            .order('id', { ascending: true });
+
+        if (error) throw error;
+        
+        if (productosDB && productosDB.length > 0) {
+            products = productosDB.map(p => ({
+                id: p.id,
+                nombre: p.nombre,
+                descripcion: p.descripcion,
+                imagen: p.imagen_url || '/images/vite.svg',
+                categoria: p.categorias?.nombre || 'Varios', 
+                disponible: p.activo,
+                variantes: p.variantes.map(v => ({
+                    nombre: `${v.unidad} ${v.calidad && v.calidad !== 'Estándar' ? `(${v.calidad})` : ''}`,
+                    precio: v.precio,
+                    stock: v.stock_disponible,
+                    unidad: v.unidad
+                })).sort((a, b) => a.precio - b.precio)
+            }));
+
+            renderProducts(products); 
+        } else {
+            grid.innerHTML = `<div class="col-span-full text-center py-12 text-gray-500">No hay productos disponibles por el momento.</div>`;
+        }
+
+    } catch (error) {
+        console.error('Error cargando productos:', error);
+        // Fallback: Si falla la BD, limpia el grid para que no se quede "Cargando..."
+        if(grid) grid.innerHTML = `<div class="col-span-full text-center py-12 text-red-400">Error de conexión. Intenta recargar.</div>`;
     }
 };
 
-const subscribeToStock = () => {
-    supabase.channel('cambios-stock')
-        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'inventario' }, (payload) => {
-            const updatedItem = payload.new;
-            const productIndex = products.findIndex(p => p.id === updatedItem.id);
-            if (productIndex !== -1) {
-                products[productIndex].disponible = updatedItem.disponible;
-                renderProducts(products);
-            }
-        }).subscribe();
+// Suscripción a cambios
+const subscribeToUpdates = () => {
+    supabase.channel('cambios-productos')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'productos' }, () => fetchProducts())
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'variantes' }, () => fetchProducts())
+        .subscribe();
 };
 
-// --- 3. LÓGICA DE CARRITO ---
-const addToCart = (productId, variantIndex) => {
-    const product = products.find(p => p.id === productId);
-    const variant = product.variantes[variantIndex];
-    const uniqueId = `${productId}-${variantIndex}`;
-    const existingItem = cart.find(item => item.uniqueId === uniqueId);
-    
-    if (existingItem) {
-        existingItem.quantity += 1;
-    } else {
-        cart.push({
-            uniqueId: uniqueId,
-            id: product.id,
-            nombre: product.nombre,
-            imagen: product.imagen,
-            variantName: variant.nombre,
-            precio: variant.precio,
-            quantity: 1
-        });
+// --- 3. LÓGICA DE CARRITO (CORREGIDA Y BLINDADA) ---
+const addToCart = (productId, variantIndex, quantityToAdd) => {
+    try {
+        const product = products.find(p => p.id === productId);
+        if (!product) { console.error("Producto no encontrado en memoria"); return; }
+
+        const variant = product.variantes[variantIndex];
+        if (!variant) { console.error("Variante no válida"); return; }
+        
+        if (variant.stock === false) {
+            alert("Esta presentación está agotada temporalmente.");
+            return;
+        }
+
+        const uniqueId = `${productId}-${variantIndex}`;
+        const existingItem = cart.find(item => item.uniqueId === uniqueId);
+        
+        if (existingItem) {
+            existingItem.quantity += quantityToAdd;
+        } else {
+            cart.push({
+                uniqueId: uniqueId,
+                id: product.id,
+                nombre: product.nombre,
+                imagen: product.imagen,
+                variantName: variant.nombre,
+                precio: variant.precio,
+                quantity: quantityToAdd
+            });
+        }
+        updateCartUI();
+        animateCartIcon(); 
+        showAddedToast(product.nombre, quantityToAdd);
+    } catch (err) {
+        console.error("Error en addToCart:", err);
     }
-    updateCartUI();
-    animateCartIcon(); 
-    showAddedToast(product.nombre);
 };
 
 const changeCartQuantity = (uniqueId, change) => {
@@ -123,7 +153,7 @@ const updateCartUI = () => {
     const cartItemsContainer = document.getElementById('cart-items');
 
     const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
-    cartCountElement.textContent = totalItems;
+    if (cartCountElement) cartCountElement.textContent = totalItems;
     
     if (totalItems > 0) {
         cartCountElement.classList.remove('scale-0');
@@ -134,7 +164,7 @@ const updateCartUI = () => {
     }
 
     const totalPrice = cart.reduce((sum, item) => sum + (item.precio * item.quantity), 0);
-    cartTotalElement.textContent = formatMoney(totalPrice) + "*";
+    if (cartTotalElement) cartTotalElement.textContent = formatMoney(totalPrice) + "*";
 
     if (cart.length === 0) {
         cartItemsContainer.innerHTML = `
@@ -170,6 +200,7 @@ const updateCartUI = () => {
         alertDiv.innerHTML = `<i class="fa-solid fa-triangle-exclamation mt-0.5"></i> <p><strong>Nota:</strong> Precios sujetos a cambios leves según cosecha.</p>`;
         cartItemsContainer.appendChild(alertDiv);
 
+        // Listeners del carrito
         document.querySelectorAll('.qty-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 e.stopPropagation();
@@ -185,93 +216,95 @@ const updateCartUI = () => {
     }
 };
 
-// --- 4. CHECKOUT (CORREGIDO Y COMPLETO) ---
-const checkout = () => {
+// --- 4. CHECKOUT (CORREGIDO PARA ESPERAR BASE DE DATOS) ---
+const checkout = async () => {
     if (cart.length === 0) return;
 
-    // 1. Pedir datos
     const nombre = prompt("👤 Por favor, ingresa tu Nombre Completo para el pedido:");
     if (!nombre || nombre.trim() === "") return; 
 
     const direccion = prompt("📍 Ingresa tu Dirección de Entrega (Conjunto/Torre/Apto):");
     if (!direccion || direccion.trim() === "") return; 
 
-    // Opcional: Pedir nota adicional si es importante
-    // const notas = prompt("📝 ¿Alguna nota adicional? (Opcional):") || "";
-
     const checkoutBtn = document.getElementById('checkout-btn');
     const btnTextOriginal = checkoutBtn.innerHTML;
-    checkoutBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Abriendo WhatsApp...';
+    checkoutBtn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Guardando...';
     checkoutBtn.disabled = true;
 
     const totalPrice = cart.reduce((sum, item) => sum + (item.precio * item.quantity), 0);
 
-    // 2. BACKUP EN NUBE (Fire & Forget - Sin await)
-    supabase
-        .from('pedidos')
-        .insert([{ 
-            nombre_cliente: nombre, 
-            direccion_entrega: direccion, 
-            productos: cart, 
-            total_estimado: totalPrice, 
+    try {
+        // --- GUARDADO SEGURO EN BD (CON AWAIT) ---
+        // Esperamos a que la base de datos confirme antes de seguir
+        const { error } = await supabase.from('pedidos').insert([{ 
+            cliente_nombre: nombre, 
+            cliente_direccion: direccion, 
+            detalle_pedido: cart, 
+            total: totalPrice, 
             estado: 'pendiente' 
-        }])
-        .then(({ error }) => { if (error) console.warn("Error backup nube:", error); });
+        }]);
 
-    // 3. CONSTRUIR MENSAJE COMPLETO (¡VITAL!)
-    let message = `¡Hola amigos de La Floresta! 👋%0A%0A`;
-    message += `Soy *${nombre}*. Me gustaría pedir:%0A%0A`;
-    
-    cart.forEach(item => {
-        message += `✅ *${item.quantity} x ${item.nombre}* - ${item.variantName}%0A   └ Ref: ${formatMoney(item.precio * item.quantity)}%0A`;
-    });
-    
-    message += `%0A💰 *VALOR APROXIMADO: ${formatMoney(totalPrice)}*`;
-    message += `%0A_(Entiendo que este valor es una referencia)_`;
-    
-    // --- AQUÍ ESTÁ LA INFORMACIÓN VITAL RESTAURADA ---
-    message += `%0A%0A----------------------------------%0A`;
-    message += `📦 *Confirmación de Entrega:*%0A`;
-    message += `Tengo presente que las entregas son los *Miércoles y Sábados*.%0A`;
-    message += `🤝 El pago lo haré *Contra Entrega* una vez reciba y verifique la calidad de los productos.%0A`;
-    // ------------------------------------------------
-    
-    message += `%0A📍 *Dirección:* ${direccion}`;
-    message += `%0A📝 *Nota:* (Escribe aquí si necesitas algo más)`;
-    
-    // 4. LÓGICA INTELIGENTE DE APERTURA (WEB vs APP)
-    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-    
-    if (isMobile) {
-        // En celular: Usamos location.href con api.whatsapp.com para forzar la App
-        // Esto evita bloqueos de popups en Chrome/Safari móvil
-        window.location.href = `https://api.whatsapp.com/send?phone=${WHATSAPP_NUMBER}&text=${message}`;
-    } else {
-        // En PC: Usamos window.open con web.whatsapp.com
-        // Esto abre una pestaña nueva para que NO se pierda la tienda
-        window.open(`https://web.whatsapp.com/send?phone=${WHATSAPP_NUMBER}&text=${message}`, '_blank');
+        if (error) throw error;
+
+    } catch (error) {
+        console.error("Error guardando en BD (Continuando a WhatsApp):", error);
+        // No bloqueamos la venta si falla la BD, pero dejamos registro en consola
     }
 
-    // Restaurar botón
+    // --- GENERACIÓN DE MENSAJE Y REDIRECCIÓN ---
+    let message = `¡Hola amigos de La Floresta! 👋\n\n`;
+    message += `Soy *${nombre}*. Me gustaría pedir:\n\n`;
+    
+    cart.forEach(item => {
+        message += `✅ *${item.quantity} x ${item.nombre}* - ${item.variantName}\n   └ Ref: ${formatMoney(item.precio * item.quantity)}\n`;
+    });
+    
+    message += `\n💰 *VALOR APROXIMADO: ${formatMoney(totalPrice)}*`;
+    message += `\n_(Entiendo que este valor es una referencia)_\n`;
+    message += `\n----------------------------------\n`;
+    message += `📦 *Confirmación de Entrega:*\n`;
+    message += `Tengo presente los días de entrega.\n`;
+    message += `🤝 Pago Contra Entrega.\n`;
+    message += `\n📍 *Dirección:* ${direccion}`;
+    
+    // Codificar URL de forma segura para evitar errores con # o tildes
+    const mensajeCodificado = encodeURIComponent(message);
+    const numeroLimpio = WHATSAPP_NUMBER.replace(/\D/g, ''); // Limpiar el número
+
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    
+    let urlWhatsApp = '';
+    if (isMobile) {
+        urlWhatsApp = `https://api.whatsapp.com/send?phone=${numeroLimpio}&text=${mensajeCodificado}`;
+    } else {
+        urlWhatsApp = `https://web.whatsapp.com/send?phone=${numeroLimpio}&text=${mensajeCodificado}`;
+    }
+
+    // Abrir WhatsApp en nueva pestaña
+    window.open(urlWhatsApp, '_blank');
+
     setTimeout(() => {
         checkoutBtn.innerHTML = btnTextOriginal;
         checkoutBtn.disabled = false;
-    }, 2000);
+        // Opcional: Podrías limpiar el carrito aquí si quieres: cart = []; updateCartUI();
+    }, 1000);
 };
 
 // --- 5. UI HELPERS ---
 const animateCartIcon = () => {
     const cartBtn = document.getElementById('cart-btn');
-    cartBtn.classList.remove('animate-bounce');
-    void cartBtn.offsetWidth; 
-    cartBtn.classList.add('animate-bounce');
-    setTimeout(() => cartBtn.classList.remove('animate-bounce'), 1000);
+    if (cartBtn) {
+        cartBtn.classList.remove('animate-bounce');
+        void cartBtn.offsetWidth; 
+        cartBtn.classList.add('animate-bounce');
+        setTimeout(() => cartBtn.classList.remove('animate-bounce'), 1000);
+    }
 };
 
-const showAddedToast = (productName) => {
+const showAddedToast = (productName, quantity) => {
     const toast = document.createElement('div');
     toast.className = "fixed top-24 right-4 z-50 bg-green-600 text-white px-5 py-3 rounded-lg shadow-xl flex items-center gap-3 animate-fade-in border-2 border-green-400";
-    toast.innerHTML = `<i class="fa-solid fa-check-circle text-xl"></i> <div><p class="text-xs font-bold uppercase opacity-80">Agregado</p><p class="font-bold text-sm">${productName}</p></div>`;
+    toast.innerHTML = `<i class="fa-solid fa-check-circle text-xl"></i> <div><p class="text-xs font-bold uppercase opacity-80">Agregado</p><p class="font-bold text-sm">${quantity}x ${productName}</p></div>`;
     document.body.appendChild(toast);
     
     setTimeout(() => {
@@ -282,33 +315,73 @@ const showAddedToast = (productName) => {
 };
 
 const grid = document.getElementById('product-grid');
+
+// --- RENDERIZADO CON PROTECCIÓN ---
 const renderProducts = (lista) => {
-    if (lista.length > 0) {
+    if (lista && lista.length > 0) {
         grid.innerHTML = lista.map(product => ProductCard(product, false)).join('');
         
+        // A. Botones de cantidad (+/-) en la tarjeta
+        document.querySelectorAll('.card-qty-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const id = parseInt(e.currentTarget.getAttribute('data-id'));
+                const input = document.querySelector(`.card-qty-input[data-id="${id}"]`);
+                if (!input) return; // Si no hay input, salir
+
+                let val = parseInt(input.value);
+                if (e.currentTarget.classList.contains('plus')) val++;
+                else if (e.currentTarget.classList.contains('minus') && val > 1) val--;
+                input.value = val;
+            });
+        });
+
+        // B. Botón "Agregar al Canasto"
         document.querySelectorAll('.add-to-cart-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 if(e.currentTarget.disabled) return;
                 const id = parseInt(e.currentTarget.getAttribute('data-id'));
+                
+                // Buscar elementos en la tarjeta
                 const select = document.querySelector(`.variant-selector[data-id="${id}"]`);
-                const variantIndex = parseInt(select.value);
-                addToCart(id, variantIndex);
+                const qtyInput = document.querySelector(`.card-qty-input[data-id="${id}"]`);
+                
+                // VALIDACIÓN CRÍTICA:
+                // Si el usuario no actualizó ProductCard.js, 'qtyInput' será null.
+                // Usamos "1" por defecto si no se encuentra el input.
+                const quantity = qtyInput ? (parseInt(qtyInput.value) || 1) : 1;
+                
+                if (select) {
+                    const variantIndex = parseInt(select.value);
+                    addToCart(id, variantIndex, quantity);
+                } else {
+                    console.error("No se encontró el selector de variantes. Revisa ProductCard.js");
+                }
+                
+                // Resetear visualmente
+                if (qtyInput) qtyInput.value = 1;
             });
         });
     } else {
-        grid.innerHTML = `<div class="col-span-full text-center py-12 text-gray-400">Cargando productos...</div>`;
+        grid.innerHTML = `<div class="col-span-full text-center py-12 text-gray-400">No se encontraron productos.</div>`;
     }
 };
 
 window.updateCardPrice = (selectElement, productId) => {
     const variantIndex = selectElement.value;
     const product = products.find(p => p.id === productId);
-    const newPrice = product.variantes[variantIndex].precio;
-    const priceDisplay = document.getElementById(`price-${productId}`);
-    if(priceDisplay) priceDisplay.textContent = formatMoney(newPrice);
+    if(product && product.variantes[variantIndex]){
+        const newPrice = product.variantes[variantIndex].precio;
+        const priceDisplay = document.getElementById(`price-${productId}`);
+        if(priceDisplay) {
+            priceDisplay.textContent = formatMoney(newPrice);
+            priceDisplay.classList.add('scale-110', 'text-green-600');
+            setTimeout(() => priceDisplay.classList.remove('scale-110', 'text-green-600'), 200);
+        }
+    }
 };
 
 const showToast = () => {
+    if(products.length === 0) return;
     const nombres = ["Doña Gloria", "Don Jorge", "María", "Camilo", "La Sra. Rosa"];
     const randomName = nombres[Math.floor(Math.random() * nombres.length)];
     const randomProduct = products[Math.floor(Math.random() * products.length)];
@@ -354,8 +427,8 @@ const startHeroSlideshow = () => {
 document.addEventListener('DOMContentLoaded', async () => {
     startHeroSlideshow();
     actualizarDeadlineBanner();
-    await fetchStock(); 
-    subscribeToStock();
+    await fetchProducts(); 
+    subscribeToUpdates();
 
     const cartBtn = document.getElementById('cart-btn');
     const closeCartBtn = document.getElementById('close-cart');
@@ -365,19 +438,26 @@ document.addEventListener('DOMContentLoaded', async () => {
     const openCart = () => { cartModal.classList.add('open'); cartOverlay.classList.add('open'); document.body.style.overflow = 'hidden'; };
     const closeCart = () => { cartModal.classList.remove('open'); cartOverlay.classList.remove('open'); document.body.style.overflow = ''; };
 
-    cartBtn.addEventListener('click', openCart);
-    closeCartBtn.addEventListener('click', closeCart);
-    cartOverlay.addEventListener('click', closeCart);
-    document.getElementById('checkout-btn').addEventListener('click', checkout);
+    if(cartBtn) cartBtn.addEventListener('click', openCart);
+    if(closeCartBtn) closeCartBtn.addEventListener('click', closeCart);
+    if(cartOverlay) cartOverlay.addEventListener('click', closeCart);
+    const checkoutButton = document.getElementById('checkout-btn');
+    if(checkoutButton) checkoutButton.addEventListener('click', checkout);
 
-    document.getElementById('theme-toggle').addEventListener('click', () => {
-        const isDark = document.documentElement.classList.toggle('dark');
-        localStorage.theme = isDark ? 'dark' : 'light';
-    });
+    const themeToggle = document.getElementById('theme-toggle');
+    if(themeToggle) {
+        themeToggle.addEventListener('click', () => {
+            const isDark = document.documentElement.classList.toggle('dark');
+            localStorage.theme = isDark ? 'dark' : 'light';
+        });
+    }
 
     const mobileMenu = document.getElementById('mobile-menu');
-    document.getElementById('mobile-menu-btn').addEventListener('click', () => mobileMenu.classList.toggle('hidden'));
-    document.querySelectorAll('.mobile-link').forEach(l => l.addEventListener('click', () => mobileMenu.classList.add('hidden')));
+    const mobileBtn = document.getElementById('mobile-menu-btn');
+    if(mobileBtn && mobileMenu) {
+        mobileBtn.addEventListener('click', () => mobileMenu.classList.toggle('hidden'));
+        document.querySelectorAll('.mobile-link').forEach(l => l.addEventListener('click', () => mobileMenu.classList.add('hidden')));
+    }
 
     document.querySelectorAll('.filter-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
@@ -388,7 +468,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             e.target.classList.remove('text-gray-500', 'dark:text-gray-400');
             e.target.classList.add('bg-agro-dark', 'text-white', 'shadow');
             const cat = e.target.getAttribute('data-category');
-            renderProducts(cat === 'todo' ? products : products.filter(p => p.categoria === cat));
+            if (cat === 'todo') {
+                renderProducts(products);
+            } else {
+                const filtrados = products.filter(p => p.categoria.toLowerCase() === cat.toLowerCase());
+                renderProducts(filtrados);
+            }
         });
     });
 

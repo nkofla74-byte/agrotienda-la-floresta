@@ -4,10 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Panel Administrativo - La Floresta</title>
+    <script type="module" src="/src/admin.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        /* Estilos específicos para los interruptores y pestañas */
         .active-tab { background-color: #16a34a; color: white; }
         .inactive-tab { background-color: #e2e8f0; color: #475569; }
         .toggle-checkbox:checked { right: 0; border-color: #68D391; }
@@ -16,258 +16,111 @@
 </head>
 <body class="bg-gray-100 min-h-screen font-sans">
 
-    <div id="login-screen" class="flex items-center justify-center h-screen bg-slate-900 z-50 fixed w-full top-0 left-0 transition-all duration-500">
+    <div id="login-screen" class="flex items-center justify-center h-screen bg-slate-900 z-50 fixed w-full top-0 left-0">
         <div class="bg-white p-8 rounded-xl shadow-2xl text-center max-w-sm w-full">
             <div class="mb-4 text-green-600 text-5xl"><i class="fa-solid fa-user-shield"></i></div>
             <h2 class="text-2xl font-bold mb-4 text-slate-800">Admin La Floresta</h2>
             
-            <input type="password" id="password-input" placeholder="Contraseña..." class="w-full p-3 border border-gray-300 rounded-lg mb-4 focus:ring-2 focus:ring-green-500 outline-none transition text-center text-lg">
-            
-            <button onclick="checkLogin()" class="w-full bg-green-600 text-white font-bold py-3 rounded-lg hover:bg-green-700 transition shadow-lg text-lg">
-                ENTRAR
-            </button>
-            
-            <p id="error-msg" class="text-red-500 text-sm mt-3 hidden font-bold animate-pulse">
-                <i class="fa-solid fa-circle-exclamation"></i> Contraseña incorrecta
-            </p>
-            <p class="text-xs text-gray-400 mt-4">Clave: admin123</p>
+            <form id="login-form">
+                <input type="email" id="email" placeholder="Usuario..." class="w-full p-3 border border-gray-300 rounded-lg mb-2 text-center" required>
+                <input type="password" id="password" placeholder="Contraseña..." class="w-full p-3 border border-gray-300 rounded-lg mb-4 text-center" required>
+                <button type="submit" class="w-full bg-green-600 text-white font-bold py-3 rounded-lg hover:bg-green-700 transition">ENTRAR</button>
+            </form>
+            <p id="error-msg" class="text-red-500 text-sm mt-3 hidden">Datos incorrectos</p>
         </div>
     </div>
 
     <div id="dashboard" class="hidden min-h-screen flex flex-col">
-        
-        <nav class="bg-slate-900 text-white p-4 shadow-md sticky top-0 z-40">
-            <div class="max-w-7xl mx-auto flex justify-between items-center">
-                <div class="flex items-center gap-3">
-                    <i class="fa-solid fa-leaf text-green-400 text-xl"></i>
-                    <h1 class="font-bold text-xl tracking-wide">Panel de Control</h1>
-                </div>
-                <div class="flex items-center gap-4">
-                    <a href="/" class="text-sm bg-slate-800 hover:bg-slate-700 px-3 py-2 rounded-lg text-gray-300 hover:text-white flex items-center gap-2 transition">
-                        Ver Tienda <i class="fa-solid fa-arrow-right-from-bracket"></i>
-                    </a>
-                </div>
+        <nav class="bg-slate-900 text-white p-4 shadow-md sticky top-0 z-40 flex justify-between items-center">
+            <div class="flex items-center gap-3">
+                <i class="fa-solid fa-leaf text-green-400 text-xl"></i>
+                <h1 class="font-bold text-xl">Panel de Control</h1>
+            </div>
+            <div class="flex gap-2">
+                <a href="/" class="bg-slate-800 px-3 py-2 rounded text-sm hover:bg-slate-700">Ver Tienda</a>
+                <button id="logout-btn" class="bg-red-600 px-3 py-2 rounded text-sm hover:bg-red-700">Salir</button>
             </div>
         </nav>
 
-        <div class="flex-1 max-w-7xl mx-auto w-full p-6">
-            
-            <div class="flex gap-4 mb-8 overflow-x-auto pb-2">
-                <button onclick="switchTab('pedidos')" id="tab-pedidos" class="flex-1 py-4 px-6 rounded-xl font-bold text-lg shadow transition flex justify-center items-center gap-2 active-tab whitespace-nowrap">
-                    <i class="fa-solid fa-list-check"></i> Pedidos
-                </button>
-                <button onclick="switchTab('inventario')" id="tab-inventario" class="flex-1 py-4 px-6 rounded-xl font-bold text-lg shadow transition flex justify-center items-center gap-2 inactive-tab whitespace-nowrap">
-                    <i class="fa-solid fa-boxes-stacked"></i> Inventario
-                </button>
+        <div class="max-w-7xl mx-auto w-full p-6">
+            <div class="flex gap-4 mb-8 overflow-x-auto">
+                <button id="tab-pedidos" class="flex-1 py-4 px-6 rounded-xl font-bold text-lg shadow active-tab transition"><i class="fa-solid fa-list-check"></i> Pedidos</button>
+                <button id="tab-crear" class="flex-1 py-4 px-6 rounded-xl font-bold text-lg shadow inactive-tab transition"><i class="fa-solid fa-plus-circle"></i> Nuevo Producto</button>
+                <button id="tab-inventario" class="flex-1 py-4 px-6 rounded-xl font-bold text-lg shadow inactive-tab transition"><i class="fa-solid fa-boxes-stacked"></i> Inventario</button>
             </div>
 
             <div id="view-pedidos" class="animate-fade-in">
-                <div class="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
-                    <h2 class="text-2xl font-bold text-slate-800">📦 Gestión de Pedidos</h2>
-                    <div class="flex gap-2 w-full sm:w-auto">
-                        <button onclick="fetchPedidos()" class="bg-blue-100 text-blue-700 hover:bg-blue-200 px-4 py-2 rounded-lg font-bold flex-1 sm:flex-none transition"><i class="fa-solid fa-rotate"></i> Actualizar</button>
-                        <button onclick="downloadExcel()" class="bg-green-600 text-white hover:bg-green-700 px-4 py-2 rounded-lg font-bold shadow flex-1 sm:flex-none transition flex items-center justify-center gap-2"><i class="fa-solid fa-file-excel"></i> Excel</button>
-                    </div>
+                <div class="flex justify-end mb-4">
+                    <button id="btn-excel" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded shadow flex items-center gap-2 text-sm font-bold">
+                        <i class="fa-solid fa-file-excel"></i> Descargar Excel
+                    </button>
                 </div>
+                <div class="bg-white rounded-xl shadow-lg overflow-hidden border border-gray-200 p-4 overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead class="bg-slate-100 text-slate-600 uppercase text-xs font-bold">
+                            <tr><th class="p-4">Fecha</th><th class="p-4">Cliente</th><th class="p-4">Detalle</th><th class="p-4">Total</th><th class="p-4">Estado</th><th class="p-4">Acción</th></tr>
+                        </thead>
+                        <tbody id="pedidos-body" class="text-sm text-gray-700"></tbody>
+                    </table>
+                </div>
+            </div>
 
-                <div class="bg-white rounded-xl shadow-lg overflow-hidden border border-gray-200">
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-left border-collapse">
-                            <thead class="bg-slate-100 text-slate-600 uppercase text-xs font-bold">
-                                <tr>
-                                    <th class="p-4 border-b">Fecha</th>
-                                    <th class="p-4 border-b">Cliente</th>
-                                    <th class="p-4 border-b">Dirección</th>
-                                    <th class="p-4 border-b">Productos</th>
-                                    <th class="p-4 border-b text-right">Total</th>
-                                    <th class="p-4 border-b text-center">Estado</th>
-                                    <th class="p-4 border-b text-center">Acción</th>
-                                </tr>
-                            </thead>
-                            <tbody id="table-body" class="text-sm text-gray-700">
-                                <tr><td colspan="7" class="p-8 text-center text-gray-400">Cargando pedidos...</td></tr>
-                            </tbody>
-                        </table>
-                    </div>
+            <div id="view-crear" class="hidden animate-fade-in">
+                <div class="bg-white p-6 rounded-xl shadow-lg border border-gray-200 max-w-2xl mx-auto">
+                    <h2 class="text-xl font-bold mb-4">Agregar Nuevo Item</h2>
+                    
+                    <form id="product-form" class="space-y-4">
+                        <div class="flex items-center gap-3 bg-slate-50 p-3 rounded-lg border border-slate-200 mb-4">
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" id="is-basket-check" class="sr-only peer">
+                                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-green-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div>
+                                <span class="ml-3 text-sm font-medium text-gray-900 font-bold">¿Es una Canasta / Combo?</span>
+                            </label>
+                        </div>
+
+                        <input type="text" id="prod-nombre" placeholder="Nombre (ej: Aguacate Hass o Canasta Familiar)" class="w-full p-3 border rounded" required>
+                        
+                        <div id="simple-desc-container">
+                            <textarea id="prod-desc" placeholder="Descripción breve del producto..." class="w-full p-3 border rounded" rows="2"></textarea>
+                        </div>
+
+                        <div id="basket-builder" class="hidden bg-green-50 p-4 rounded-xl border border-green-200">
+                            <h3 class="font-bold text-green-800 text-sm mb-2"><i class="fa-solid fa-basket-shopping"></i> Armar Canasta</h3>
+                            
+                            <div class="flex gap-2 mb-3">
+                                <select id="basket-product-select" class="flex-1 p-2 border rounded text-sm bg-white">
+                                    <option value="">Cargando productos...</option>
+                                </select>
+                                <input type="number" id="basket-qty" class="w-20 p-2 border rounded text-sm text-center" value="1" min="1" placeholder="Cant.">
+                                <button type="button" id="add-ingredient-btn" class="bg-green-600 text-white px-3 rounded hover:bg-green-700 transition"><i class="fa-solid fa-plus"></i></button>
+                            </div>
+
+                            <ul id="basket-list" class="space-y-1 mb-2 text-sm bg-white p-2 rounded border border-green-100 min-h-[50px]">
+                                <li class="text-gray-400 italic text-center text-xs py-2">Agrega productos aquí...</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="grid grid-cols-2 gap-4">
+                            <select id="prod-cat" class="p-3 border rounded">
+                                </select>
+                            <input type="file" id="prod-img" class="p-2 border rounded" accept="image/*">
+                        </div>
+
+                        <div class="border-t pt-4">
+                            <h3 class="font-bold text-sm mb-2">Precios y Presentaciones</h3>
+                            <div id="variantes-container" class="space-y-2"></div>
+                            <button type="button" id="add-variant-btn" class="text-green-600 text-sm font-bold mt-2 hover:underline">+ Agregar variante</button>
+                        </div>
+
+                        <button type="submit" class="w-full bg-green-600 text-white font-bold py-3 rounded hover:bg-green-700 transition transform active:scale-95">Guardar</button>
+                    </form>
                 </div>
             </div>
 
             <div id="view-inventario" class="hidden animate-fade-in">
-                <div class="flex justify-between items-center mb-6">
-                    <h2 class="text-2xl font-bold text-slate-800">🥑 Disponibilidad de Productos</h2>
-                    <button onclick="cargarInventario()" class="bg-blue-100 text-blue-700 hover:bg-blue-200 px-4 py-2 rounded-lg font-bold transition"><i class="fa-solid fa-rotate"></i> Sincronizar</button>
-                </div>
-                <div id="inventory-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                    <div class="col-span-full text-center py-10 text-gray-400">Cargando inventario...</div>
-                </div>
+                <div id="inventory-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"></div>
             </div>
-
         </div>
     </div>
-
-    <script type="module">
-        import { supabase } from './src/supabaseClient.js';
-        import { products as initialProducts } from './src/data/products.js'; 
-        import { formatMoney } from './src/utils/formatters.js';
-
-        let pedidosData = [];
-        let productosReales = [...initialProducts];
-
-        // --- SISTEMA DE PESTAÑAS ---
-        window.switchTab = (tab) => {
-            const viewPedidos = document.getElementById('view-pedidos');
-            const viewInventario = document.getElementById('view-inventario');
-            const btnPedidos = document.getElementById('tab-pedidos');
-            const btnInventario = document.getElementById('tab-inventario');
-
-            if(tab === 'pedidos') {
-                viewPedidos.classList.remove('hidden');
-                viewInventario.classList.add('hidden');
-                btnPedidos.className = "flex-1 py-4 px-6 rounded-xl font-bold text-lg shadow transition flex justify-center items-center gap-2 active-tab whitespace-nowrap";
-                btnInventario.className = "flex-1 py-4 px-6 rounded-xl font-bold text-lg shadow transition flex justify-center items-center gap-2 inactive-tab whitespace-nowrap";
-                fetchPedidos();
-            } else {
-                viewPedidos.classList.add('hidden');
-                viewInventario.classList.remove('hidden');
-                btnPedidos.className = "flex-1 py-4 px-6 rounded-xl font-bold text-lg shadow transition flex justify-center items-center gap-2 inactive-tab whitespace-nowrap";
-                btnInventario.className = "flex-1 py-4 px-6 rounded-xl font-bold text-lg shadow transition flex justify-center items-center gap-2 active-tab whitespace-nowrap";
-                cargarInventario();
-            }
-        };
-
-        // --- LOGIN FUERZA BRUTA (AQUÍ ESTÁ LA SOLUCIÓN) ---
-        window.checkLogin = () => {
-            const input = document.getElementById('password-input');
-            const loginScreen = document.getElementById('login-screen');
-            const dashboard = document.getElementById('dashboard');
-            const errorMsg = document.getElementById('error-msg');
-            
-            const passIngresada = input.value.trim(); 
-            const CLAVE_REAL = 'admin123';
-
-            if(passIngresada === CLAVE_REAL) { 
-                // 1. Ocultar Login usando estilo directo (MÁS SEGURO)
-                loginScreen.style.display = 'none'; 
-                
-                // 2. Mostrar Dashboard y asegurar que sea Flex
-                dashboard.classList.remove('hidden');
-                dashboard.style.display = 'flex'; 
-
-                // 3. Cambiar URL para que se sienta como redirección
-                window.location.hash = "dashboard";
-
-                // 4. Cargar datos
-                fetchPedidos(); 
-            } else {
-                errorMsg.classList.remove('hidden');
-                alert(`Error: Clave incorrecta.\nTu escribiste: "${passIngresada}"`);
-                input.value = ''; 
-                input.focus();
-            }
-        };
-
-        // --- PEDIDOS ---
-        window.fetchPedidos = async () => {
-            const { data, error } = await supabase.from('pedidos').select('*').order('created_at', { ascending: false });
-            if (error) { console.error("Error BD:", error); return; }
-            pedidosData = data;
-            renderTable(data);
-        };
-
-        const renderTable = (pedidos) => {
-            const tbody = document.getElementById('table-body');
-            if(!pedidos || pedidos.length === 0) return tbody.innerHTML = `<tr><td colspan="7" class="p-8 text-center text-gray-500">No hay pedidos registrados.</td></tr>`;
-
-            tbody.innerHTML = pedidos.map(p => {
-                const fecha = new Date(p.created_at).toLocaleString('es-CO', { month: 'short', day: 'numeric', hour: '2-digit', minute:'2-digit' });
-                const lista = p.productos.map(i => `<div>• <b>${i.quantity}</b>x ${i.nombre}</div>`).join('');
-                const statusColor = p.estado === 'pendiente' ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800';
-
-                return `
-                    <tr class="hover:bg-gray-50 border-b last:border-0 bg-white">
-                        <td class="p-4 text-xs text-gray-500">${fecha}</td>
-                        <td class="p-4 font-bold">${p.nombre_cliente}</td>
-                        <td class="p-4 text-xs max-w-[150px] truncate" title="${p.direccion_entrega}">${p.direccion_entrega}</td>
-                        <td class="p-4 text-xs">${lista}</td>
-                        <td class="p-4 text-right font-mono font-bold">${formatMoney(p.total_estimado)}</td>
-                        <td class="p-4 text-center"><span class="px-2 py-1 rounded-full text-[10px] font-bold ${statusColor} uppercase">${p.estado}</span></td>
-                        <td class="p-4 text-center">
-                            ${p.estado === 'pendiente' ? 
-                                `<button onclick="marcarDespachado(${p.id})" class="text-blue-600 hover:text-white hover:bg-blue-600 border border-blue-200 px-3 py-1 rounded-md text-xs font-bold transition">DESPACHAR</button>` : 
-                                `<i class="fa-solid fa-circle-check text-green-500 text-lg"></i>`
-                            }
-                        </td>
-                    </tr>
-                `;
-            }).join('');
-        };
-
-        window.marcarDespachado = async (id) => {
-            if(!confirm('¿Marcar como enviado?')) return;
-            const { error } = await supabase.from('pedidos').update({ estado: 'despachado' }).eq('id', id);
-            if(!error) fetchPedidos();
-        };
-
-        window.downloadExcel = () => {
-            if (pedidosData.length === 0) return alert("Sin datos");
-            let csv = "ID,Fecha,Cliente,Direccion,Total,Estado,Detalle\n";
-            pedidosData.forEach(p => {
-                const detalle = p.productos.map(i => `${i.quantity}x ${i.nombre}`).join(" | ");
-                csv += `${p.id},${new Date(p.created_at).toLocaleDateString()},${p.nombre_cliente},${p.direccion_entrega},${p.total_estimado},${p.estado},"${detalle}"\n`;
-            });
-            const link = document.createElement("a");
-            link.href = "data:text/csv;charset=utf-8," + encodeURI(csv);
-            link.download = `pedidos_${new Date().toISOString().slice(0,10)}.csv`;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-        };
-
-        // --- INVENTARIO ---
-        window.cargarInventario = async () => {
-            const grid = document.getElementById('inventory-grid');
-            grid.innerHTML = '<div class="col-span-full text-center py-10 text-green-600"><i class="fa-solid fa-spinner fa-spin text-3xl"></i></div>';
-
-            const { data, error } = await supabase.from('inventario').select('*');
-            if (error) { console.error(error); return grid.innerHTML = '<p class="text-red-500 text-center">Error conexión</p>'; }
-
-            productosReales = initialProducts.map(p => {
-                const stockInfo = data ? data.find(item => item.id === p.id) : null;
-                return { ...p, disponible: stockInfo ? stockInfo.disponible : true };
-            });
-            renderInventario();
-        };
-
-        const renderInventario = () => {
-            const grid = document.getElementById('inventory-grid');
-            grid.innerHTML = productosReales.map(p => `
-                <div class="bg-white rounded-xl shadow-md p-4 flex items-center justify-between border-l-4 ${p.disponible ? 'border-green-500' : 'border-red-500'}">
-                    <div class="flex items-center gap-4">
-                        <img src="${p.imagen}" class="w-16 h-16 rounded-lg object-cover bg-gray-100 ${!p.disponible ? 'grayscale' : ''}">
-                        <div>
-                            <h4 class="font-bold text-gray-800 text-sm">${p.nombre}</h4>
-                            <span class="text-[10px] px-2 py-0.5 rounded font-bold uppercase ${p.disponible ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}">
-                                ${p.disponible ? 'DISPONIBLE' : 'AGOTADO'}
-                            </span>
-                        </div>
-                    </div>
-                    <label class="flex items-center cursor-pointer relative">
-                        <input type="checkbox" class="sr-only toggle-checkbox" onchange="toggleStock(${p.id})" ${p.disponible ? 'checked' : ''}>
-                        <div class="w-11 h-6 bg-gray-200 rounded-full border border-gray-200 toggle-label transition duration-200 ease-in-out"></div>
-                        <div class="dot absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition transform duration-200 ease-in-out ${p.disponible ? 'translate-x-full' : ''}"></div>
-                    </label>
-                </div>
-            `).join('');
-        };
-
-        window.toggleStock = async (id) => {
-            const index = productosReales.findIndex(p => p.id === id);
-            const nuevoEstado = !productosReales[index].disponible;
-            productosReales[index].disponible = nuevoEstado; 
-            renderInventario();
-            const { error } = await supabase.from('inventario').update({ disponible: nuevoEstado }).eq('id', id);
-            if(error) { alert("Error guardando"); productosReales[index].disponible = !nuevoEstado; renderInventario(); }
-        };
-    </script>
 </body>
 </html>
