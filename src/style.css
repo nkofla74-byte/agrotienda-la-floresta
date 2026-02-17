@@ -92,3 +92,11 @@ html {
 .qty-btn {
   @apply w-6 h-6 flex items-center justify-center rounded-full bg-gray-200 text-gray-600 hover:bg-agro-primary hover:text-white transition font-bold text-xs;
 }
+/* Fondo del Hero recuperado */
+#hero-bg {
+    background-image: url('/images/fresnolog.jpg');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    filter: brightness(0.6);
+}
